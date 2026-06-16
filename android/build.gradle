@@ -1,0 +1,35 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+
+    // Kotlin 2.2.x dropped support for languageVersion < 1.8. Some Flutter
+    // plugins (e.g. posthog_flutter) still pin themselves to 1.6, which would
+    // fail compilation. Force a floor of 1.8 across every subproject's Kotlin
+    // compile tasks while leaving newer versions untouched.
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        compilerOptions {
+            if (languageVersion.orNull == null ||
+                languageVersion.get() < org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8) {
+                languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8)
+            }
+            if (apiVersion.orNull == null ||
+                apiVersion.get() < org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8) {
+                apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8)
+            }
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}

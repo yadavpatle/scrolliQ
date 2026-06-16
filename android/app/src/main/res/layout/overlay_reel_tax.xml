@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Full-screen blocking overlay shown as "Reel Tax" every N reels -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/reel_tax_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F0000000"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <TextView
+        android:id="@+id/reel_tax_emoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🧘"
+        android:textSize="64sp" />
+
+    <TextView
+        android:id="@+id/reel_tax_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="Reel Tax"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/reel_tax_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:text="Take a breath.\nWhat were you avoiding?"
+        android:textColor="#CCFFFFFF"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/reel_tax_timer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="5"
+        android:textColor="#80FFFFFF"
+        android:textSize="40sp"
+        android:textStyle="bold" />
+
+</LinearLayout>

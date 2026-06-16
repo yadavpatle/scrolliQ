@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ScrollIQ</string>
+    <string name="reel_counter_service_label">ScrollIQ Reel Counter</string>
+    <string name="reel_counter_service_description">
+        Counts reels, shorts and other short-form videos you scroll through in
+        Instagram, YouTube, TikTok, Snapchat and Facebook so ScrollIQ can compute
+        your daily Brain Score. No content is read or sent anywhere — only the
+        number of vertical scrolls inside the reel feed is counted, locally on
+        your device.
+    </string>
+
+    <string name="overlay_notification_channel">Reel Counter HUD</string>
+    <string name="overlay_notification_title">ScrollIQ is watching your reels</string>
+    <string name="overlay_notification_text">Tap the floating brain to open ScrollIQ.</string>
+
+    <!-- Override these via your CI / local strings.xml. Defaults are placeholders. -->
+    <string name="posthog_api_key">phc_PLACEHOLDER</string>
+    <string name="posthog_host">https://us.i.posthog.com</string>
+</resources>

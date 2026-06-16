@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Accessibility service config for ScrollIQ reel counter.
+
+  We only listen to vertical-scroll, window-state-change and window-content-change
+  events on the explicitly whitelisted short-video apps. We never query content
+  outside these apps. canRetrieveWindowContent is required so per-app detectors
+  can peek at view-id-resource-name nodes (e.g. clips_viewer_view_pager) to
+  distinguish the reel feed from the rest of the app.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeViewScrolled|typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="100"
+    android:description="@string/reel_counter_service_description"
+    android:packageNames="com.instagram.android,com.google.android.youtube,com.zhiliaoapp.musically,com.ss.android.ugc.trill,com.snapchat.android,com.facebook.katana,com.facebook.lite" />

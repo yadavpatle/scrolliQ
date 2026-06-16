@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ScrollIQ HUD bubble. Lives in a TYPE_APPLICATION_OVERLAY window above the
+  current foreground app. The whole pill is the touch target — drag to move,
+  tap to open ScrollIQ.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlay_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/overlay_bubble_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:elevation="6dp">
+
+    <ImageView
+        android:id="@+id/overlay_brain_icon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:contentDescription="@string/reel_counter_service_label"
+        android:src="@drawable/ic_brain_mascot" />
+
+    <TextView
+        android:id="@+id/overlay_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-black"
+        android:shadowColor="#80000000"
+        android:shadowRadius="2"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:text="0" />
+</LinearLayout>
