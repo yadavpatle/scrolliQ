@@ -1,5 +1,6 @@
 plugins {
     id "com.android.application"
+    id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
     // Uncomment after adding google-services.json:
     // id "com.google.gms.google-services"
@@ -37,10 +38,23 @@ android {
 
     defaultConfig {
         applicationId "com.scrolliq.app"
-        minSdkVersion flutter.minSdkVersion
+        // Explicit floor of API 24 (Android 7.0). Settings.canDrawOverlays
+        // requires API 23+, and Flutter 3.27+ ships with API 24 as its
+        // supported minimum, so 24 strikes the broadest realistic balance.
+        minSdkVersion 24
         targetSdk 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+
+        // Multidex keeps us safe on the API 24-25 range where 64K methods
+        // is still a hard limit even with all the firebase + supabase deps.
+        multiDexEnabled true
+
+        // Note: ABI filters intentionally not declared here. Flutter ships
+        // native libs for arm64-v8a, armeabi-v7a and x86_64 by default,
+        // which already covers every realistic Android device. Declaring
+        // ndk.abiFilters explicitly conflicts with `flutter build apk
+        // --split-per-abi`, so we leave it to the Flutter Gradle plugin.
     }
 
     signingConfigs {
@@ -83,4 +97,7 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    // Required when multiDexEnabled=true on minSdk < 21 builds, and
+    // recommended on 21+ to use the official multidex helper from AndroidX.
+    implementation 'androidx.multidex:multidex:2.0.1'
 }

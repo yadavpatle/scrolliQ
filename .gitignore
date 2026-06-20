@@ -8,6 +8,14 @@ build/
 *.iml
 *.lock
 
+# Gradle / Kotlin caches & crash dumps
+.gradle/
+android/.gradle/
+android/.kotlin/
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
 # Generated
 *.g.dart
 *.freezed.dart

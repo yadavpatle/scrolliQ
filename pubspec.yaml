@@ -46,7 +46,6 @@ dependencies:
   # Local storage / env
   shared_preferences: ^2.2.3
   flutter_dotenv: ^5.1.0
-  flutter_secure_storage: ^9.2.2
 
   # Date / time
   intl: ^0.19.0
@@ -67,7 +66,7 @@ dependencies:
   url_launcher: ^6.2.5
 
   # Referrals / invites
-  share_plus: ^10.1.2
+  share_plus: ^13.1.0
   app_links: ^6.3.2
 
 dev_dependencies:

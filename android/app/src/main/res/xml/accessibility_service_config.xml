@@ -2,11 +2,19 @@
 <!--
   Accessibility service config for ScrollIQ reel counter.
 
-  We only listen to vertical-scroll, window-state-change and window-content-change
-  events on the explicitly whitelisted short-video apps. We never query content
-  outside these apps. canRetrieveWindowContent is required so per-app detectors
-  can peek at view-id-resource-name nodes (e.g. clips_viewer_view_pager) to
-  distinguish the reel feed from the rest of the app.
+  We listen to vertical-scroll, window-state-change and window-content-change
+  events. We must observe window-state-change events across apps (no
+  packageNames whitelist) for one reason only: to know when the user LEAVES a
+  short-video app, so the floating count pill can be hidden promptly. We never
+  query or traverse the content of any non-whitelisted app — the service early-
+  returns on a package check and only ever calls getRootInActiveWindow() / runs
+  a detector for the four tracked short-video apps below. canRetrieveWindowContent
+  is required so those per-app detectors can peek at view-id-resource-name nodes
+  (e.g. clips_viewer_view_pager) to distinguish the reel feed from the rest of
+  the app.
+
+  Tracked apps (content inspected): com.instagram.android,
+  com.google.android.youtube, com.facebook.katana, com.facebook.lite.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeViewScrolled|typeWindowStateChanged|typeWindowContentChanged"
@@ -14,5 +22,4 @@
     android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
-    android:description="@string/reel_counter_service_description"
-    android:packageNames="com.instagram.android,com.google.android.youtube,com.facebook.katana,com.facebook.lite" />
+    android:description="@string/reel_counter_service_description" />

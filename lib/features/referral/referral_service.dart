@@ -90,10 +90,12 @@ class ReferralService {
       link = Env.referralBaseUrl;
     }
     try {
-      await Share.share(
-        "I'm using ScrollIQ to turn my screen-time into a Brain Score 🧠 "
-        "Join me and let's see who scrolls less:\n$link",
-        subject: 'Join me on ScrollIQ',
+      await SharePlus.instance.share(
+        ShareParams(
+          text: "I'm using ScrollIQ to turn my screen-time into a Brain Score 🧠 "
+              "Join me and let's see who scrolls less:\n$link",
+          subject: 'Join me on ScrollIQ',
+        ),
       );
       _ref.read(analyticsProvider).capture('referral_shared');
       return true;

@@ -34,6 +34,14 @@ class ReelCounterAccessibilityService : AccessibilityService() {
     private val lastCountAtPerPkg: HashMap<String, Long> = HashMap()
     private var reelTaxManager: ReelTaxManager? = null
 
+    /**
+     * Package of the app currently in the foreground, as last reported by a
+     * non-transient TYPE_WINDOW_STATE_CHANGED event. Used to (a) hide the pill
+     * the moment the user switches to a non-reel app, and (b) ignore stray
+     * background events from a tracked app while another app is on top.
+     */
+    @Volatile private var foregroundPackage: String? = null
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         ReelCounterStore.init(applicationContext)
@@ -44,7 +52,35 @@ class ReelCounterAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         val pkg = event.packageName?.toString() ?: return
-        val detector = detectors[pkg] ?: return
+
+        val isWindowChange =
+            event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+
+        // Track the real foreground app on window transitions. Transient
+        // windows (status bar / quick-settings, the IME, our own pill) must not
+        // count as "switched apps", otherwise pulling the notification shade or
+        // tapping a comment box would wrongly hide the pill.
+        if (isWindowChange && !isTransientWindow(pkg)) {
+            foregroundPackage = pkg
+        }
+
+        val detector = detectors[pkg]
+        if (detector == null) {
+            // A non-tracked app is involved. If it has become the foreground
+            // app, the user has left every reel/short surface — hide the pill.
+            // We deliberately do NOT inspect this app's content (no safeRoot()
+            // call): we only ever read its package name. This preserves the
+            // "never query content outside the tracked apps" guarantee.
+            if (isWindowChange && !isTransientWindow(pkg)) {
+                ReelFeedState.set(false)
+            }
+            return
+        }
+
+        // Ignore stray background events from a tracked app while a different
+        // app is actually on top, so the pill never floats over a non-reel app.
+        val fg = foregroundPackage
+        if (fg != null && fg != pkg) return
 
         val root = safeRoot()
         val matched = detector.consume(event, root)
@@ -53,7 +89,8 @@ class ReelCounterAccessibilityService : AccessibilityService() {
         // particular event didn't represent a new reel. The detector updates
         // its inFeed flag as a side-effect of consume(), so this keeps the
         // overlay's count pill in sync with whatever the user is actually
-        // looking at right now.
+        // looking at right now. With no decay timer, the pill stays steady
+        // through passive viewing and only hides when this turns false.
         ReelFeedState.set(detector.isInReelFeed)
 
         if (!matched) return
@@ -64,6 +101,30 @@ class ReelCounterAccessibilityService : AccessibilityService() {
         lastCountAtPerPkg[pkg] = now
         ReelCounterStore.increment(pkg)
         Log.i(TAG, "++ count $pkg total=${ReelCounterStore.snapshot().total}")
+    }
+
+    /**
+     * True for windows that overlay the current app rather than replacing it:
+     * the system UI (status bar / shade / quick settings), the active input
+     * method, and ScrollIQ's own overlay pill. Switching focus to one of these
+     * does not mean the user left the reel app.
+     */
+    private fun isTransientWindow(pkg: String): Boolean {
+        if (pkg.isEmpty()) return true
+        if (pkg == packageName) return true
+        if (pkg == SYSTEM_UI_PACKAGE) return true
+        if (pkg == currentImePackage()) return true
+        return false
+    }
+
+    /** Resolve the active input-method package so the keyboard never hides the pill. */
+    private fun currentImePackage(): String? = try {
+        Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.DEFAULT_INPUT_METHOD,
+        )?.substringBefore('/')?.takeIf { it.isNotEmpty() }
+    } catch (_: Throwable) {
+        null
     }
 
     /**
@@ -81,6 +142,7 @@ class ReelCounterAccessibilityService : AccessibilityService() {
         reelTaxManager = null
         // No more events will arrive — make sure the overlay pill doesn't
         // stay stuck on whatever the last detector reading was.
+        foregroundPackage = null
         ReelFeedState.set(false)
         Log.i(TAG, "ReelCounter accessibility service unbound")
         return super.onUnbind(intent)
@@ -88,6 +150,9 @@ class ReelCounterAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "ReelCounterSvc"
+
+        /** System UI package whose windows (status bar, shade, quick settings) overlay the current app. */
+        private const val SYSTEM_UI_PACKAGE = "com.android.systemui"
 
         /** Minimum gap (ms) between two counted scrolls per package. */
         private const val DEBOUNCE_MS = 400L

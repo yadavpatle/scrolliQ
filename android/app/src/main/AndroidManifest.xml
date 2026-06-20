@@ -132,7 +132,7 @@
 
         <!-- PostHog -->
         <meta-data
-            android:name="com.posthog.posthog.API_KEY"
+            android:name="com.posthog.posthog.PROJECT_TOKEN"
             android:value="@string/posthog_api_key" />
         <meta-data
             android:name="com.posthog.posthog.POSTHOG_HOST"

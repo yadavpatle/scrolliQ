@@ -9,26 +9,20 @@ import java.util.concurrent.CopyOnWriteArrayList
  * feed?". Pushed by [ReelCounterAccessibilityService] from the per-package
  * detectors, observed by [OverlayService] to toggle the floating count pill.
  *
- * The accessibility service config only delivers events from the seven tracked
- * short-video apps, so when the user leaves those apps entirely we receive
- * nothing — the last detector's [ReelDetector.isInReelFeed] reading would stay
- * stale forever. To handle that we run a small decay timer: every "true" pulse
- * re-arms a [DECAY_MS] timeout that automatically flips back to `false` if no
- * fresh in-feed event arrives. Active reel viewing produces near-continuous
- * accessibility events so the decay never trips while the user is genuinely on
- * a reel surface.
+ * Visibility is fully edge-driven — there is deliberately **no** idle/decay
+ * timer. The pill must stay rock-steady the entire time the user is on a reel
+ * surface (including while passively watching a single reel that fires no
+ * scroll events), and disappear only when they actually leave it. The
+ * accessibility service guarantees a matching `false` whenever the user:
+ *   • navigates away from the feed inside a tracked app (detector flips
+ *     [ReelDetector.isInReelFeed] to false), or
+ *   • switches to any other (untracked) foreground app — detected via that
+ *     app's window-state-changed event, or
+ *   • disables the service (onUnbind pushes false).
  *
  * All state changes and listener callbacks are dispatched on the main thread.
  */
 object ReelFeedState {
-
-    /**
-     * Idle window after which the state auto-decays to `false`. Real reel
-     * scrolling/playback fires events every few hundred ms, so this short
-     * timeout only trips when the user navigates to an untracked app (e.g.
-     * presses home) where no further events arrive — hiding the pill promptly.
-     */
-    private const val DECAY_MS = 1_500L
 
     fun interface Listener {
         fun onChanged(inReelFeed: Boolean)
@@ -39,26 +33,18 @@ object ReelFeedState {
 
     @Volatile private var inReelFeed: Boolean = false
 
-    private val decayRunnable = Runnable { setInternal(false) }
-
     /** Current value; safe to call from any thread. */
     @JvmStatic
     fun isInReelFeed(): Boolean = inReelFeed
 
     /**
-     * Push the latest reading from the accessibility service. Call after every
-     * processed event so the decay timer stays armed while the user keeps
-     * scrolling reels and trips when they leave.
+     * Push the latest reading from the accessibility service. The pill stays
+     * visible until an explicit `false` arrives (leaving the feed or the app),
+     * so passive viewing never hides it.
      */
     @JvmStatic
     fun set(value: Boolean) {
-        mainHandler.post {
-            mainHandler.removeCallbacks(decayRunnable)
-            if (value) {
-                mainHandler.postDelayed(decayRunnable, DECAY_MS)
-            }
-            setInternal(value)
-        }
+        mainHandler.post { setInternal(value) }
     }
 
     /** Adds [listener] and immediately delivers the current value. */

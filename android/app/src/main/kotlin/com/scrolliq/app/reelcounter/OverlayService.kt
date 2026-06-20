@@ -42,6 +42,12 @@ class OverlayService : Service() {
     private var screenWidthPx: Int = 0
     private var screenHeightPx: Int = 0
 
+    /**
+     * Set once the user drags the pill. After that we never auto-reposition it
+     * (no re-centring, no edge-snapping) — it stays exactly where it is left.
+     */
+    private var hasUserMoved: Boolean = false
+
     private val storeListener = ReelCounterStore.Listener { snapshot ->
         updateCount(snapshot.total)
     }
@@ -137,9 +143,13 @@ class OverlayService : Service() {
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
         ).apply {
+            // Default position: top centre. Keep a TOP|START gravity so the
+            // drag math (which treats x as an offset from the left edge) stays
+            // valid. x/y are finalised by centerHorizontally() below once we
+            // know the bubble's measured width.
             gravity = Gravity.TOP or Gravity.START
-            x = (screenWidthPx * 0.7).toInt()
-            y = (screenHeightPx * 0.18).toInt()
+            x = (screenWidthPx * 0.4).toInt()
+            y = (screenHeightPx * 0.04).toInt()
         }
 
         view.setOnTouchListener(BubbleTouchListener(view, params))
@@ -148,12 +158,37 @@ class OverlayService : Service() {
 
         try {
             windowManager.addView(view, params)
+            // Centre it straight away. The bubble starts GONE (so the layout
+            // pass never measures it and view.width stays 0); measuring it
+            // explicitly lets us centre reliably regardless of visibility.
+            centerHorizontally()
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to add overlay view", t)
             bubbleView = null
             layoutParams = null
             stopSelfAndCleanup()
         }
+    }
+
+    /**
+     * Position the pill at the top-centre of the screen — unless the user has
+     * already dragged it somewhere, in which case we leave their chosen spot
+     * untouched. Measures the bubble explicitly because it may still be GONE
+     * (and therefore unmeasured by the normal layout pass) when this runs.
+     */
+    private fun centerHorizontally() {
+        if (hasUserMoved) return
+        val view = bubbleView ?: return
+        val params = layoutParams ?: return
+        val spec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        view.measure(spec, spec)
+        val w = if (view.width > 0) view.width else view.measuredWidth
+        if (w <= 0) return
+        params.x = ((screenWidthPx - w) / 2).coerceAtLeast(0)
+        params.y = (screenHeightPx * 0.04).toInt()
+        try {
+            windowManager.updateViewLayout(view, params)
+        } catch (_: Throwable) { /* view detached */ }
     }
 
     /**
@@ -166,7 +201,13 @@ class OverlayService : Service() {
         val view = bubbleView ?: return
         view.post {
             val target = if (inReelFeed) View.VISIBLE else View.GONE
-            if (view.visibility != target) view.visibility = target
+            if (view.visibility != target) {
+                view.visibility = target
+                // Re-assert the top-centre default the first time the pill is
+                // actually shown (it was unmeasured while GONE). Skipped once
+                // the user has moved it so their position sticks.
+                if (target == View.VISIBLE) centerHorizontally()
+            }
         }
     }
 
@@ -198,7 +239,7 @@ class OverlayService : Service() {
             .start()
     }
 
-    /** Drag with snap-to-edge, tap-to-open. */
+    /** Free drag (stays where dropped, no edge snapping), tap-to-open. */
     private inner class BubbleTouchListener(
         private val view: View,
         private val params: WindowManager.LayoutParams,
@@ -226,6 +267,9 @@ class OverlayService : Service() {
                     val dy = event.rawY - touchStartY
                     if (!dragging && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                         dragging = true
+                        // The user is taking manual control — stop ever
+                        // auto-positioning the pill from now on.
+                        hasUserMoved = true
                     }
                     if (dragging) {
                         params.x = (initialX + dx).toInt()
@@ -239,21 +283,16 @@ class OverlayService : Service() {
                     return true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (dragging) {
-                        snapToEdge()
-                    } else if (event.action == MotionEvent.ACTION_UP) {
+                    if (!dragging && event.action == MotionEvent.ACTION_UP) {
+                        // A tap (not a drag) opens the app. When dragging we
+                        // leave the pill exactly where the user dropped it —
+                        // no snap to any edge.
                         openAppFromBubble()
                     }
                     return true
                 }
             }
             return false
-        }
-
-        private fun snapToEdge() {
-            val midX = params.x + view.width / 2
-            params.x = if (midX < screenWidthPx / 2) 16 else screenWidthPx - view.width - 16
-            try { windowManager.updateViewLayout(view, params) } catch (_: Throwable) {}
         }
     }
 
