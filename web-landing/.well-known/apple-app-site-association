@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["REPLACE_TEAMID.com.scrolliq.app"],
+        "components": [
+          {
+            "/": "/invite",
+            "comment": "ScrollIQ invite landing"
+          },
+          {
+            "/": "/invite/*",
+            "comment": "ScrollIQ invite landing (sub-paths)"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["REPLACE_TEAMID.com.scrolliq.app"]
+  }
+}

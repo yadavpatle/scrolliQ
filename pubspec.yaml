@@ -53,7 +53,7 @@ dependencies:
   timezone: ^0.9.4
 
   # Analytics
-  posthog_flutter: ^4.7.1
+  posthog_flutter: ^5.28.0
 
   # Push notifications
   firebase_core: ^3.1.1
@@ -65,6 +65,10 @@ dependencies:
   collection: ^1.18.0
   logger: ^2.3.0
   url_launcher: ^6.2.5
+
+  # Referrals / invites
+  share_plus: ^10.1.2
+  app_links: ^6.3.2
 
 dev_dependencies:
   flutter_test:

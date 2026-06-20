@@ -11,18 +11,55 @@ create extension if not exists "pgcrypto";
 -- 1. USERS
 -- ===========================================================================
 create table if not exists public.users (
-    id          uuid primary key references auth.users(id) on delete cascade,
-    name        text not null default '',
-    email       text not null,
-    avatar_url  text,
-    fcm_token   text,
-    created_at  timestamptz not null default now()
+    id            uuid primary key references auth.users(id) on delete cascade,
+    name          text not null default '',
+    email         text not null,
+    avatar_url    text,
+    fcm_token     text,
+    -- Short, shareable invite code used to build referral URLs.
+    referral_code text unique,
+    created_at    timestamptz not null default now()
 );
 
 create index if not exists users_email_idx on public.users (lower(email));
 create index if not exists users_name_idx  on public.users (lower(name));
 
--- Auto-insert profile row on signup
+-- For older databases created before referral_code existed.
+alter table public.users add column if not exists referral_code text;
+create unique index if not exists users_referral_code_idx
+    on public.users (referral_code);
+
+-- ---------------------------------------------------------------------------
+-- Referral-code generator: 8-char uppercase hex, guaranteed unique.
+-- Uses core md5()/random() (no pgcrypto dependency, which lives in the
+-- `extensions` schema and isn't on this function's search_path).
+-- ---------------------------------------------------------------------------
+create or replace function public.gen_referral_code()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    candidate text;
+begin
+    loop
+        candidate := upper(substr(
+            md5(random()::text || clock_timestamp()::text), 1, 8));
+        exit when not exists (
+            select 1 from public.users where referral_code = candidate
+        );
+    end loop;
+    return candidate;
+end;
+$$;
+
+-- Backfill codes for any existing rows that don't have one yet.
+update public.users
+set referral_code = public.gen_referral_code()
+where referral_code is null;
+
+-- Auto-insert profile row on signup (now also assigns a referral code)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -30,14 +67,15 @@ security definer
 set search_path = public
 as $$
 begin
-    insert into public.users (id, email, name, avatar_url)
+    insert into public.users (id, email, name, avatar_url, referral_code)
     values (
         new.id,
         new.email,
         coalesce(new.raw_user_meta_data->>'name',
                  new.raw_user_meta_data->>'full_name',
                  split_part(new.email, '@', 1)),
-        new.raw_user_meta_data->>'avatar_url'
+        new.raw_user_meta_data->>'avatar_url',
+        public.gen_referral_code()
     )
     on conflict (id) do nothing;
     return new;
@@ -319,3 +357,66 @@ as $$
 $$;
 
 grant execute on function public.search_users(text) to anon, authenticated;
+
+-- ===========================================================================
+-- 8. RPC: referrals
+-- ===========================================================================
+
+-- Look up the owner of a referral code. Callable by anon so the invite
+-- landing/preview works before the invited user has authenticated.
+create or replace function public.get_referrer(code text)
+returns table (id uuid, name text, avatar_url text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select id, name, avatar_url
+    from public.users
+    where referral_code = upper(trim(code))
+    limit 1;
+$$;
+
+grant execute on function public.get_referrer(text) to anon, authenticated;
+
+-- Redeem a referral code for the *currently authenticated* user. Creates a
+-- pending friend request from the referrer (sender) to the new user (me,
+-- receiver). Runs as security definer so it can insert a row whose sender_id
+-- is the referrer — which the standard "Friends: insert sender" RLS policy
+-- would otherwise forbid. Idempotent and self-referral-safe.
+create or replace function public.redeem_referral(code text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    me       uuid := auth.uid();
+    referrer uuid;
+begin
+    if me is null then
+        raise exception 'Not authenticated';
+    end if;
+
+    select id into referrer
+    from public.users
+    where referral_code = upper(trim(code))
+    limit 1;
+
+    if referrer is null then
+        raise exception 'Invalid referral code';
+    end if;
+
+    -- Can't refer yourself.
+    if referrer = me then
+        return;
+    end if;
+
+    -- Don't clobber an existing relationship (pending/accepted/declined).
+    insert into public.friends (sender_id, receiver_id, status)
+    values (referrer, me, 'pending')
+    on conflict (sender_id, receiver_id) do nothing;
+end;
+$$;
+
+grant execute on function public.redeem_referral(text) to authenticated;

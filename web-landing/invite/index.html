@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>You're invited to ScrollIQ</title>
+  <meta name="description" content="A friend invited you to ScrollIQ. Install the app and your friend request will be waiting." />
+  <meta name="theme-color" content="#0b0b14" />
+  <meta name="robots" content="noindex" />
+
+  <!-- Open Graph (so the share preview looks right in WhatsApp / Messages / etc.) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Join me on ScrollIQ" />
+  <meta property="og:description" content="ScrollIQ turns your screen-time into a Brain Score. Beat me on the leaderboard." />
+  <meta property="og:image" content="https://scrolliq.app/og.png" />
+
+  <!--
+    iOS Smart Banner — once you have an App Store ID, replace the placeholder
+    so Safari shows a native install banner.
+  -->
+  <!-- <meta name="apple-itunes-app" content="app-id=XXXXXXXXX, app-argument=https://scrolliq.app/invite"> -->
+
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#0b0b14;color:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;line-height:1.5;min-height:100%}
+    body{display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:440px;text-align:center;
+      background:linear-gradient(180deg,#13132a 0%,#0e0e1c 100%);
+      border:1px solid #23234a;border-radius:24px;padding:32px 24px;
+      box-shadow:0 30px 80px rgba(124,92,255,.18),0 8px 24px rgba(0,0,0,.4)}
+    .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:12px;font-weight:700}
+    .logo-dot{width:22px;height:22px;border-radius:7px;
+      background:linear-gradient(135deg,#7c5cff,#22d3ee)}
+    h1{font-size:26px;margin:8px 0 8px;letter-spacing:-.01em}
+    p{color:#a8a8c4;margin:0 0 20px}
+    .ref{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      background:#1a1a36;border:1px solid #2a2a4d;color:#cdbfff;
+      padding:6px 12px;border-radius:8px;font-size:13px;letter-spacing:.06em}
+    .stores{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+    .btn{display:flex;align-items:center;justify-content:center;gap:10px;
+      padding:14px 20px;border-radius:14px;text-decoration:none;font-weight:600;
+      transition:transform .12s ease}
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:linear-gradient(135deg,#7c5cff,#5a3dff);color:#fff}
+    .btn-ghost{background:transparent;border:1px solid #2a2a4d;color:#fff}
+    .open{display:block;margin-top:14px;color:#a8a8c4;font-size:13px;text-decoration:underline}
+    .spin{display:inline-block;width:14px;height:14px;border:2px solid #ffffff55;
+      border-top-color:#fff;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}
+    @keyframes s{to{transform:rotate(360deg)}}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <div class="logo"><span class="logo-dot"></span>ScrollIQ</div>
+    <h1>You're invited 🎉</h1>
+    <p id="msg"><span class="spin"></span>Opening ScrollIQ…</p>
+    <div id="ref-wrap" class="hidden">
+      <p style="margin-bottom:8px">Invite code</p>
+      <span class="ref" id="ref-display"></span>
+    </div>
+
+    <div class="stores">
+      <a class="btn btn-primary" id="play"
+         href="https://play.google.com/store/apps/details?id=com.scrolliq.app">
+        Get on Google Play
+      </a>
+      <a class="btn btn-ghost" id="ios"
+         href="#">
+        Get on the App Store
+      </a>
+    </div>
+
+    <a class="open" id="open-app" href="#">Already installed? Open ScrollIQ</a>
+  </main>
+
+<script>
+  (function () {
+    var params  = new URLSearchParams(location.search);
+    var ref     = (params.get('ref') || '').trim();
+    var refSafe = encodeURIComponent(ref);
+    var ua      = navigator.userAgent || '';
+    var isAndroid = /android/i.test(ua);
+    var isIOS     = /iphone|ipad|ipod/i.test(ua);
+
+    // TODO: replace XXXXXXXXX with the real App Store ID once iOS ships.
+    var IOS_APP_ID = 'XXXXXXXXX';
+    var PLAY_URL = 'https://play.google.com/store/apps/details?id=com.scrolliq.app'
+                 + (ref ? '&referrer=ref%3D' + refSafe : '');
+    var IOS_URL  = 'https://apps.apple.com/app/id' + IOS_APP_ID;
+    var SCHEME   = 'scrolliq://invite' + (ref ? '?ref=' + refSafe : '');
+
+    document.getElementById('play').href = PLAY_URL;
+    document.getElementById('ios').href  = IOS_URL;
+    document.getElementById('open-app').href = SCHEME;
+
+    if (ref) {
+      document.getElementById('ref-display').textContent = ref;
+      document.getElementById('ref-wrap').classList.remove('hidden');
+    }
+
+    // Try to launch the app via custom scheme. If installed, the page is
+    // backgrounded before the fallback fires. The HTTPS App Link itself will
+    // also open the app directly once assetlinks.json is verified.
+    var triedDeepLink = false;
+    function tryDeepLink () {
+      if (triedDeepLink) return;
+      triedDeepLink = true;
+      // Use location.replace so users don't bounce back here on "Back".
+      try { location.replace(SCHEME); } catch (e) {}
+    }
+
+    // Fire the deep-link attempt shortly after paint.
+    setTimeout(tryDeepLink, 100);
+
+    // After a couple of seconds with no app handoff, send to the right store.
+    var fallback = setTimeout(function () {
+      if (isAndroid) {
+        location.replace(PLAY_URL);
+      } else if (isIOS) {
+        if (IOS_APP_ID === 'XXXXXXXXX') {
+          document.getElementById('msg').innerHTML =
+            'iOS coming soon. <br>Open this link from your Android phone, or share the code <b>' +
+            (ref || '—') + '</b> with the inviter.';
+        } else {
+          location.replace(IOS_URL);
+        }
+      } else {
+        document.getElementById('msg').textContent =
+          'Open this link on your phone to install ScrollIQ.';
+      }
+    }, 2200);
+
+    // If the user backgrounds the tab (i.e. the app actually opened),
+    // cancel the store redirect.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) clearTimeout(fallback);
+    });
+  })();
+</script>
+</body>
+</html>

@@ -14,6 +14,8 @@ class TikTokReelDetector(
     @Volatile private var inFeed: Boolean = false
     @Volatile private var lastInFeedAt: Long = 0L
 
+    override val isInReelFeed: Boolean get() = inFeed
+
     private val pagerIds = listOf(
         "feed_recycler_view",
         "video_root",
@@ -30,7 +32,8 @@ class TikTokReelDetector(
         if (ReelNodeUtil.anyIdContains(root, pagerIds, maxNodes = 200)) {
             inFeed = true
             lastInFeedAt = nowWall
-        } else if (nowWall - lastInFeedAt > 3_000L) {
+        } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            nowWall - lastInFeedAt > 1_200L) {
             inFeed = false
         }
 

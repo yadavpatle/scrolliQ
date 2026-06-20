@@ -8,7 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/mascot.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -83,13 +83,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
               ),
             ),
-            Center(
+            const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _BrandMark(animation: _ctrl),
-                  const SizedBox(height: 28),
-                  const Text(
+                  _BrandMark(),
+                  SizedBox(height: 28),
+                  Text(
                     AppConstants.appName,
                     style: TextStyle(
                       fontSize: 38,
@@ -98,8 +98,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
+                  SizedBox(height: 6),
+                  Text(
                     AppConstants.tagline,
                     style: TextStyle(
                       color: AppColors.textSecondaryDark,
@@ -125,55 +125,33 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 }
 
 class _BrandMark extends StatelessWidget {
-  const _BrandMark({required this.animation});
-  final Animation<double> animation;
+  const _BrandMark();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 112,
-      height: 112,
+      width: 124,
+      height: 124,
       child: Stack(
         alignment: Alignment.center,
         children: [
           // Soft outer halo.
           Container(
-            width: 112,
-            height: 112,
+            width: 124,
+            height: 124,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  AppColors.primary.withValues(alpha: 0.35),
+                  AppColors.primary.withValues(alpha: 0.32),
                   Colors.transparent,
                 ],
-                stops: const [0.4, 1.0],
+                stops: const [0.45, 1.0],
               ),
             ),
           ),
-          // Core badge with brand gradient.
-          Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              gradient: AppColors.brandGradient,
-              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.45),
-                  blurRadius: 30,
-                  offset: const Offset(0, 14),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.bolt_rounded,
-                color: AppColors.onPrimary,
-                size: 52,
-              ),
-            ),
-          ),
+          // The ScrollIQ mascot is the logo.
+          const Mascot(mood: MascotMood.ecstatic, size: 108),
         ],
       ),
     );

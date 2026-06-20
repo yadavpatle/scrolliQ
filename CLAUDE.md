@@ -148,22 +148,47 @@ reference for the visual language:
 
 | File | Purpose |
 |------|---------|
-| `ReelCounterAccessibilityService.kt` | Routes accessibility events to per-app detectors, 350ms debounce per package |
-| `ReelDetector.kt` | Interface: `onWindowStateChanged()` + `isReelScroll()` |
-| `ReelNodeUtil.kt` | Tree traversal helpers (`anyIdContains`, `classContains`) |
+| `ReelCounterAccessibilityService.kt` | Routes accessibility events to per-app detectors, 400ms debounce per package (`DEBOUNCE_MS`) |
+| `ReelDetector.kt` | Interface: single `consume(event: AccessibilityEvent, root: AccessibilityNodeInfo?): Boolean` — returns true exactly once per new reel |
+| `ReelNodeUtil.kt` | Tree traversal helpers (`anyIdContains`, `classContains`, `isVerticalAdvance`) |
 | `ReelCounterStore.kt` | Process-wide singleton, SharedPrefs-backed, daily counter + 30-day history, observable via `Listener` |
 | `ReelCounterPlugin.kt` | MethodChannel `com.scrolliq/reel_counter` + EventChannel `com.scrolliq/reel_counter/stream` |
 | `OverlayService.kt` | Foreground service, `TYPE_APPLICATION_OVERLAY` draggable bubble HUD |
 | `ReelTaxManager.kt` | Full-screen blocking overlay every N reels (configurable), 5-sec countdown |
-| `detectors/InstagramReelDetector.kt` | IG Reels: clips_viewer / reels_viewer node IDs |
-| `detectors/YouTubeShortsDetector.kt` | YT Shorts: reel_recycler / shorts_player IDs |
-| `detectors/TikTokReelDetector.kt` | TikTok: feed_recycler_view / video_pager IDs (both musically + trill packages) |
-| `detectors/SnapchatSpotlightDetector.kt` | Snap Spotlight: spotlight / ngs_spotlight_recycler_view IDs |
-| `detectors/FacebookReelsDetector.kt` | FB Reels: reels_viewer / reels_swipeable_view_pager (katana + lite) |
+| `detectors/YouTubeShortsDetector.kt` | YT Shorts: **content-description fingerprint** (channel handle) + engagement gate + ad skip + 600ms cooldown. **Verified on-device.** |
+| `detectors/FacebookReelsDetector.kt` | FB Reels: **content-description fingerprint** (creator handle) + engagement gate + ad skip + 600ms cooldown (katana + lite). FB strips all resource IDs, so ID matching does not work. **Verified on-device.** |
+| `detectors/InstagramReelDetector.kt` | IG Reels: legacy resource-ID approach (clips_viewer / reels_viewer). **Not yet verified — likely over-counts + counts ads.** |
+| `detectors/TikTokReelDetector.kt` | TikTok: legacy resource-ID approach (feed_recycler_view / video_pager, both musically + trill packages). **Not yet verified.** |
+| `detectors/SnapchatSpotlightDetector.kt` | Snap Spotlight: legacy resource-ID approach (spotlight / ngs_spotlight_recycler_view). **Not yet verified.** |
 
-### Detection Heuristic
+### Detection Heuristic — two approaches
 
-Each detector tracks whether the user is in the reel feed via `onWindowStateChanged` (checks view-id-resource-name subtree). On `TYPE_VIEW_SCROLLED`, if in-feed AND `abs(scrollDeltaY) >= 200` OR `fromIndex != toIndex`, it's one reel. Debounced 350ms per package.
+**1. Content-description fingerprint (current best — YouTube, Facebook).**
+Modern apps either strip resource IDs (Facebook → `(name removed)`) or fire
+`CONTENT_CHANGE_TYPE_SUBTREE` repeatedly during playback (YouTube), so the
+legacy ID approach either counts nothing or massively over-counts. The robust
+approach instead does a single bounded DFS over the node tree per event and:
+
+- Detects the reel surface via content-desc markers (e.g. YT pager ids still
+  work for *presence*; FB uses "create reel" / "tap to show video controls" /
+  "view <creator>'s reels").
+- Builds a **per-reel fingerprint** from the single highest-priority stable
+  content-desc (creator/channel handle — appears atomically, stays stable
+  during playback). Counting uses fingerprint *change*, not event type.
+- **Ad skip**: explicit ad signals ("Sponsored", "Visit advertiser", "Paid
+  partnership", …).
+- **Engagement gate**: requires a genuine engagement marker (like / comment /
+  reaction / remix / share / sound). Ads lack this rail, so they never count —
+  far more robust than enumerating ad CTA strings.
+- **600ms cooldown**: absorbs transient fingerprint flips while fields load in
+  during the swipe transition (prevents double-counting one swipe).
+
+**2. Legacy resource-ID approach (Instagram, TikTok, Snapchat — unverified).**
+Tracks in-feed via `anyIdContains(pagerIds)`; counts on subtree-change of a
+pager source OR a vertical scroll advance. Known failure modes: zero-count if
+the app strips IDs, over-count + counts ads if IDs match (no fingerprint /
+cooldown / ad gate). These should be migrated to approach #1 with an on-device
+UI dump per app.
 
 ### Permissions Required
 
@@ -297,11 +322,14 @@ analyticsProvider                  // PostHog
 ```bash
 flutter pub get
 flutter analyze            # must be 0 issues
-flutter test               # 12 tests
+flutter test               # 21 tests (brain score + user avatar)
 flutter run                # debug on device
 
-# Kotlin-only verify:
-cd android && .\gradlew.bat :app:compileDebugKotlin
+# Faster iterate on native detector changes (flutter run loses USB debug on
+# some older devices, e.g. Mi A1, after install — build+install+launch instead):
+flutter build apk --debug
+adb install -r build\app\outputs\flutter-apk\app-debug.apk
+adb shell monkey -p com.scrolliq.app.debug -c android.intent.category.LAUNCHER 1
 
 # Release:
 flutter build apk --release
@@ -312,6 +340,80 @@ flutter build apk --release
 - `.env` file (not committed): SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID
 - `android/app/google-services.json` (Firebase, not committed)
 - `android/app/src/main/res/values/strings.xml`: posthog_api_key, posthog_host
+
+## Reel-Detector Debugging Playbook
+
+How to fix/verify a per-app reel detector on a connected device (the process
+used for YouTube and Facebook):
+
+1. **Get on the reel surface** in the target app, screen unlocked.
+2. **Dump the live accessibility tree:**
+   ```bash
+   adb shell dumpsys window | findstr mCurrentFocus      # confirm app is foreground
+   adb shell uiautomator dump /sdcard/ui.xml
+   adb pull /sdcard/ui.xml .\ui_dump.xml
+   ```
+3. **Extract signals** (resource-ids, content-descs, text, scrollable nodes)
+   with a small PowerShell `[regex]::Matches(...)` script. Look for:
+   - Whether resource-ids are real or stripped (`(name removed)` → ID approach
+     is useless, must use content-descs).
+   - A stable per-reel identifier for the fingerprint (channel/creator handle).
+   - Engagement markers (like / comment / reaction / share / remix / sound).
+   - Ad markers (Sponsored / Visit advertiser / Paid partnership / CTA text).
+4. **Rewrite the detector** following the content-description fingerprint
+   pattern (see `YouTubeShortsDetector.kt` / `FacebookReelsDetector.kt`):
+   single bounded DFS → ad gate → engagement gate → fingerprint-change +
+   600ms cooldown.
+5. **Build, install, launch, verify** (see Build & Run). After a fresh
+   *uninstall*, the Accessibility + Usage permissions reset and must be
+   re-granted. `adb install -r` preserves them.
+6. Clean up temp `*_dump.xml` / `*.ps1` files afterwards.
+
+> Tip: `BrainPal` (`com.brainrot.android`) is installed on the test device as
+> the accuracy reference. Both its and ScrollIQ's accessibility services can be
+> enabled simultaneously for side-by-side comparison.
+
+## Session Work Log (detector accuracy + bug fixes)
+
+Chronological record of fixes made while tuning count accuracy against BrainPal:
+
+1. **YouTube Shorts — ads counted as shorts.** Added ad detection (ad view-ids
+   + ad text) so ads are skipped.
+2. **YouTube Shorts — count incremented without scrolling.** Root cause: YT
+   fires `CONTENT_CHANGE_TYPE_SUBTREE` continuously during playback. Fixed with
+   a per-reel content-desc fingerprint (channel handle); count only on change.
+3. **YouTube Shorts — zero counts.** Root cause: modern YT Shorts exposes **no
+   scrollable nodes / no `TYPE_VIEW_SCROLLED`**, so the scroll-gated version
+   never fired. Fixed by switching to fingerprint-on-content-desc (no scroll
+   dependency).
+4. **YouTube Shorts — one swipe counted twice.** Root cause: progressive field
+   loading changed the fingerprint twice. Fixed by using a single
+   highest-priority fingerprint field + 600ms cooldown.
+5. **YouTube Shorts — ads still slipped through.** Replaced fragile ad-CTA
+   enumeration with an **engagement-rail requirement** (organic shorts always
+   expose like/comment/remix/sound; ads don't). Verified working.
+6. **Facebook Reels — not counting at all.** Root cause: FB strips all
+   resource-ids to `(name removed)`, so the hardcoded pager-id match never set
+   `inReels`. Rewrote to the content-description fingerprint pattern (creator
+   handle + engagement gate + ad skip + cooldown). Verified working.
+7. **`challenges_repository.recompute` — counted out-of-window days.** It
+   computed `endLimit` but never bounded the query, so days/score from *after*
+   the challenge window were counted (a user could "complete" a 7-day challenge
+   with good days weeks later; `score` accumulated unbounded). Fixed by adding
+   `.lt('date', toStr)` so the query covers exactly `[start, endLimit)`.
+
+### Detector status snapshot
+
+| App | Approach | Verified on device |
+|-----|----------|--------------------|
+| YouTube Shorts | content-desc fingerprint | ✅ yes |
+| Facebook Reels | content-desc fingerprint | ✅ yes |
+| Instagram Reels | legacy resource-id | ❌ not yet (likely over-counts + ads) |
+| TikTok | legacy resource-id | ❌ not yet |
+| Snapchat Spotlight | legacy resource-id | ❌ not yet |
+
+> **Next:** migrate Instagram, TikTok, Snapchat to the content-desc fingerprint
+> pattern using the Debugging Playbook above (need one UI dump per app).
 
 ## Roadmap (Not Yet Implemented)
 

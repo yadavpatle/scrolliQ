@@ -83,12 +83,17 @@ class ChallengesRepository {
     final fromStr = '${start.year.toString().padLeft(4, '0')}-'
         '${start.month.toString().padLeft(2, '0')}-'
         '${start.day.toString().padLeft(2, '0')}';
+    // Exclusive upper bound: the window covers exactly [start, endLimit).
+    final toStr = '${endLimit.year.toString().padLeft(4, '0')}-'
+        '${endLimit.month.toString().padLeft(2, '0')}-'
+        '${endLimit.day.toString().padLeft(2, '0')}';
 
     final rows = await _client
         .from('daily_usage')
         .select('date,brain_score')
         .eq('user_id', me)
         .gte('date', fromStr)
+        .lt('date', toStr)
         .order('date');
 
     int days = 0;

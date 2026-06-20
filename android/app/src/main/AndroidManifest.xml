@@ -67,6 +67,34 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              Referral / invite deep links.
+              Custom scheme works out of the box (good for testing & sharing):
+                  scrolliq://invite?ref=CODE
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="scrolliq" android:host="invite" />
+            </intent-filter>
+
+            <!--
+              HTTPS App Link: https://scrolliq.app/invite?ref=CODE
+              autoVerify requires hosting a Digital Asset Links file at
+              https://scrolliq.app/.well-known/assetlinks.json. Until then the
+              link opens in the browser instead of the app.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="scrolliq.app"
+                    android:pathPrefix="/invite" />
+            </intent-filter>
         </activity>
 
         <!-- Reel-counting AccessibilityService -->

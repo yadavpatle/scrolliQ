@@ -6,18 +6,24 @@ import com.scrolliq.app.reelcounter.ReelDetector
 import com.scrolliq.app.reelcounter.ReelNodeUtil
 
 /**
- * YouTube Shorts detector — accuracy-first.
+ * YouTube Shorts detector — accuracy-first, matches BrainPal counting.
  *
- * One reel = one transition into a NEW short. Strongest signal:
- *   TYPE_WINDOW_CONTENT_CHANGED with
- *   - contentChangeTypes & CONTENT_CHANGE_TYPE_SUBTREE  (new subtree swapped in)
- *   - source view-id-resource-name matching the Shorts pager id
+ * Modern YouTube Shorts exposes no scrollable views or reliable
+ * TYPE_VIEW_SCROLLED events, so we fingerprint the visible short from its
+ * accessibility content-descriptions instead.
  *
- * Falls back to typeViewScrolled with vertical advance for older builds that
- * still dispatch scroll events.
+ * Ad exclusion (the important part): an ORGANIC short always exposes an
+ * engagement action rail — like / comment / remix / sound. Ads replace this
+ * with a CTA ("Visit site", "Install", "Sponsored", …) and expose none of
+ * those affordances. So we only count when the visible page has BOTH:
+ *   • a channel handle  ("Go to channel @…")  -> used as the fingerprint, and
+ *   • at least one engagement marker          -> proves it is a real short.
+ * Pages with explicit ad signals are skipped outright. This is far more
+ * robust than enumerating every possible ad CTA string.
  *
- * `inShortsFeed` is bounded by id scan (maxNodes 200) with 3s sticky timeout
- * so leaving Shorts immediately stops counting.
+ * Counting:
+ *   +1 when the fingerprint changes to a new organic short (with cooldown to
+ *   absorb transition flicker while fields load in).
  */
 class YouTubeShortsDetector : ReelDetector {
 
@@ -26,49 +32,126 @@ class YouTubeShortsDetector : ReelDetector {
 
     @Volatile private var inShortsFeed: Boolean = false
     @Volatile private var lastInFeedAt: Long = 0L
+    @Volatile private var lastFingerprint: String = ""
+    @Volatile private var lastCountAt: Long = 0L
 
-    /** Pager-host ids that indicate a real Shorts page swap (not UI tweak). */
+    override val isInReelFeed: Boolean get() = inShortsFeed
+
+    /** Pager-host ids that indicate the Shorts feed is on screen. */
     private val pagerIds = listOf(
         "reel_recycler",
         "reel_player_page_container",
         "reel_player_underlay",
-        "shorts_player",
-        "reel_watch",
+        "reel_watch_player",
+        "reel_player_page_content",
+    )
+
+    /**
+     * Explicit ad markers (content-desc / text, lowercased substring). Kept
+     * conservative — only phrases that virtually never occur in an organic
+     * short's description/comments. The engagement-marker gate below is the
+     * primary ad defense; this list is a fast belt-and-suspenders.
+     */
+    private val adSignals = listOf(
+        "sponsored",
+        "visit advertiser",
+        "visit site",
+        "includes paid promotion",
+        "ad \u00b7",
+    )
+
+    /** Channel-handle marker — primary fingerprint, present on every short. */
+    private val channelSignal = "go to channel"
+
+    /**
+     * Engagement markers — at least one proves the page is a real short, not
+     * an ad. Ads never expose like/comment/remix/sound affordances.
+     */
+    private val engagementSignals = listOf(
+        "like this video along with",
+        "remix this short",
+        "see more videos using this sound",
+        "comment",                              // "View N comments" / "Comments"
     )
 
     override fun consume(
         event: AccessibilityEvent,
         root: AccessibilityNodeInfo?,
     ): Boolean {
-        // Refresh feed-presence cheaply per event.
         val nowWall = System.currentTimeMillis()
-        if (ReelNodeUtil.anyIdContains(root, pagerIds, maxNodes = 200)) {
+
+        // Refresh feed-presence cheaply per event.
+        if (ReelNodeUtil.anyIdContains(root, pagerIds, maxNodes = 250)) {
             inShortsFeed = true
             lastInFeedAt = nowWall
-        } else if (nowWall - lastInFeedAt > 3_000L) {
+        } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            nowWall - lastInFeedAt > 1_200L) {
             inShortsFeed = false
         }
 
-        if (!inShortsFeed) return false
+        if (!inShortsFeed || root == null) return false
 
-        // Primary path: subtree-replacement on the actual pager view.
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            val isSubtree = (event.contentChangeTypes and
-                AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) != 0
-            if (!isSubtree) return false
-            val src = runCatching { event.source }.getOrNull() ?: return false
-            return try {
-                val id = src.viewIdResourceName?.lowercase()
-                id != null && pagerIds.any { id.contains(it.lowercase()) }
-            } finally {
-                runCatching { src.recycle() }
+        // Single traversal collecting every signal we need.
+        val scan = scanTree(root)
+
+        // Explicit ad → never count.
+        if (scan.isAd) return false
+
+        // Must be a verified organic short: channel handle + engagement rail.
+        if (scan.channel.isEmpty()) return false
+        if (!scan.hasEngagement) return false
+
+        // Fingerprint on the channel handle (appears atomically on swap).
+        val fp = scan.channel
+        if (fp == lastFingerprint) return false
+
+        // Cooldown: absorb transient flips during the swipe transition.
+        if (nowWall - lastCountAt < COUNT_COOLDOWN_MS) {
+            lastFingerprint = fp
+            return false
+        }
+
+        lastFingerprint = fp
+        lastCountAt = nowWall
+        return true
+    }
+
+    private data class Scan(
+        val isAd: Boolean,
+        val channel: String,
+        val hasEngagement: Boolean,
+    )
+
+    /** One bounded DFS collecting ad / channel / engagement signals. */
+    private fun scanTree(root: AccessibilityNodeInfo): Scan {
+        var isAd = false
+        var channel = ""
+        var hasEngagement = false
+        var visited = 0
+        val stack = ArrayDeque<AccessibilityNodeInfo>()
+        stack.addLast(root)
+        while (stack.isNotEmpty() && visited < 450) {
+            val node = stack.removeLast()
+            visited++
+            val desc = node.contentDescription?.toString()?.lowercase()?.trim()
+            val text = node.text?.toString()?.lowercase()?.trim()
+            for (s in sequenceOf(desc, text)) {
+                if (s == null) continue
+                if (!isAd && adSignals.any { s.contains(it) }) isAd = true
+                if (channel.isEmpty() && s.contains(channelSignal)) channel = s
+                if (!hasEngagement && engagementSignals.any { s.contains(it) }) {
+                    hasEngagement = true
+                }
+            }
+            for (i in 0 until node.childCount) {
+                stack.addLast(node.getChild(i) ?: continue)
             }
         }
+        return Scan(isAd, channel, hasEngagement)
+    }
 
-        // Fallback: legacy scroll event with vertical advance.
-        if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-            return ReelNodeUtil.isVerticalAdvance(event)
-        }
-        return false
+    companion object {
+        /** Minimum gap between two counted shorts; absorbs transition flips. */
+        private const val COUNT_COOLDOWN_MS = 600L
     }
 }

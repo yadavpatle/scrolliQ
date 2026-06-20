@@ -59,8 +59,6 @@ class PlatformCapsRepository {
   static int _defaultLimit(ReelPlatform p) => switch (p) {
         ReelPlatform.instagram => 50,
         ReelPlatform.youtubeShorts => 50,
-        ReelPlatform.tiktok => 50,
-        ReelPlatform.snapchatSpotlight => 30,
         ReelPlatform.facebookReels => 30,
       };
 }

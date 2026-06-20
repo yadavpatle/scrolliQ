@@ -94,8 +94,7 @@ class AndroidUsageTrackingService implements UsageTrackingService {
     final d = day ?? DateTime.now();
     final usages = await getDailyUsage(day: d);
 
-    int instagram = 0, youtube = 0, tiktok = 0;
-    int facebook = 0, snapchat = 0, twitter = 0;
+    int instagram = 0, youtube = 0, facebook = 0;
     int total = 0;
 
     for (final u in usages) {
@@ -103,11 +102,8 @@ class AndroidUsageTrackingService implements UsageTrackingService {
       switch (u.packageName) {
         case 'com.instagram.android':                instagram += u.minutes; break;
         case 'com.google.android.youtube':           youtube   += u.minutes; break;
-        case 'com.zhiliaoapp.musically':
-        case 'com.ss.android.ugc.trill':             tiktok    += u.minutes; break;
-        case 'com.facebook.katana':                  facebook  += u.minutes; break;
-        case 'com.snapchat.android':                 snapchat  += u.minutes; break;
-        case 'com.twitter.android':                  twitter   += u.minutes; break;
+        case 'com.facebook.katana':
+        case 'com.facebook.lite':                    facebook  += u.minutes; break;
       }
     }
 
@@ -129,15 +125,15 @@ class AndroidUsageTrackingService implements UsageTrackingService {
       totalMinutes: total,
       instagramMinutes: instagram,
       youtubeMinutes: youtube,
-      tiktokMinutes: tiktok,
+      tiktokMinutes: 0,
       facebookMinutes: facebook,
-      snapchatMinutes: snapchat,
-      twitterMinutes: twitter,
+      snapchatMinutes: 0,
+      twitterMinutes: 0,
       lateNightMinutes: lateNight,
       // Rough heuristics — real reel/short detection requires accessibility
       // service; MVP estimates ~70% of in-app time on short-video platforms.
-      reelsEstimated:  (instagram * 0.7).round(),
-      shortsEstimated: (youtube   * 0.4).round() + (tiktok * 0.9).round(),
+      reelsEstimated:  (instagram * 0.7).round() + (facebook * 0.5).round(),
+      shortsEstimated: (youtube * 0.4).round(),
       brainScore: 100, // computed downstream by BrainScoreCalculator
     );
   }

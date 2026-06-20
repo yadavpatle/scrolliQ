@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/mascot.dart';
 
 /// "Open YouTube to see ScrollIQ in action" — launches YouTube so user sees
 /// the HUD bubble counting live. [onComplete] fires to finish onboarding.
@@ -47,7 +48,7 @@ class DemoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 40),
-              const Text('🧠', style: TextStyle(fontSize: 64)),
+              const Mascot(mood: MascotMood.happy, size: 92),
               const SizedBox(height: 24),
               // YouTube logo stand-in
               Container(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import 'mascot.dart';
 
 class AppError extends StatelessWidget {
   const AppError({
@@ -22,8 +23,8 @@ class AppError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.danger, size: 48),
-            const SizedBox(height: 16),
+            const Mascot(mood: MascotMood.dead, size: 88),
+            const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,

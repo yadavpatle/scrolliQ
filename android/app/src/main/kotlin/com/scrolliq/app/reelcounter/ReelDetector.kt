@@ -33,4 +33,15 @@ interface ReelDetector {
      * the side of permissive within reason.
      */
     fun consume(event: AccessibilityEvent, root: AccessibilityNodeInfo?): Boolean
+
+    /**
+     * True while the detector currently believes the user is parked on the
+     * reel/short surface for this package. Updated as a side-effect of
+     * [consume]; used to drive the floating count-pill overlay so it only
+     * appears while the user is actively scrolling reels.
+     *
+     * Defaults to `false` so detectors that don't implement feed-presence
+     * tracking simply don't trigger the pill.
+     */
+    val isInReelFeed: Boolean get() = false
 }

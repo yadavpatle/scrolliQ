@@ -9,8 +9,6 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.scrolliq.app.reelcounter.detectors.FacebookReelsDetector
 import com.scrolliq.app.reelcounter.detectors.InstagramReelDetector
-import com.scrolliq.app.reelcounter.detectors.SnapchatSpotlightDetector
-import com.scrolliq.app.reelcounter.detectors.TikTokReelDetector
 import com.scrolliq.app.reelcounter.detectors.YouTubeShortsDetector
 
 /**
@@ -22,12 +20,13 @@ import com.scrolliq.app.reelcounter.detectors.YouTubeShortsDetector
  */
 class ReelCounterAccessibilityService : AccessibilityService() {
 
+    // Only the currently supported platforms are registered. TikTok/Snapchat
+    // detectors remain in the codebase but are intentionally unregistered for
+    // now — re-add their entries here (and the matching enum values + manifest
+    // packageNames) to bring those platforms back.
     private val detectors: Map<String, ReelDetector> = mapOf(
         "com.instagram.android"     to InstagramReelDetector(),
         "com.google.android.youtube" to YouTubeShortsDetector(),
-        "com.zhiliaoapp.musically"  to TikTokReelDetector("com.zhiliaoapp.musically"),
-        "com.ss.android.ugc.trill"  to TikTokReelDetector("com.ss.android.ugc.trill"),
-        "com.snapchat.android"      to SnapchatSpotlightDetector(),
         "com.facebook.katana"       to FacebookReelsDetector("com.facebook.katana"),
         "com.facebook.lite"         to FacebookReelsDetector("com.facebook.lite"),
     )
@@ -48,7 +47,16 @@ class ReelCounterAccessibilityService : AccessibilityService() {
         val detector = detectors[pkg] ?: return
 
         val root = safeRoot()
-        if (!detector.consume(event, root)) return
+        val matched = detector.consume(event, root)
+
+        // Always publish the latest feed-presence reading, even when this
+        // particular event didn't represent a new reel. The detector updates
+        // its inFeed flag as a side-effect of consume(), so this keeps the
+        // overlay's count pill in sync with whatever the user is actually
+        // looking at right now.
+        ReelFeedState.set(detector.isInReelFeed)
+
+        if (!matched) return
 
         val now = event.eventTime
         val last = lastCountAtPerPkg[pkg] ?: 0L
@@ -71,6 +79,9 @@ class ReelCounterAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         reelTaxManager?.dispose()
         reelTaxManager = null
+        // No more events will arrive — make sure the overlay pill doesn't
+        // stay stuck on whatever the last detector reading was.
+        ReelFeedState.set(false)
         Log.i(TAG, "ReelCounter accessibility service unbound")
         return super.onUnbind(intent)
     }

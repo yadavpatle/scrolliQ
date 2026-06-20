@@ -7,6 +7,7 @@ import 'core/env/env.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/notifications/notification_service.dart';
+import 'features/referral/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,11 @@ class _ScrollIqAppState extends ConsumerState<ScrollIqApp> {
         await ref.read(notificationServiceProvider).init();
       } catch (e) {
         debugPrint('Notification init failed: $e');
+      }
+      try {
+        await ref.read(referralServiceProvider).init();
+      } catch (e) {
+        debugPrint('Referral init failed: $e');
       }
     });
   }

@@ -21,21 +21,20 @@ class ReelCountSnapshot extends Equatable {
   /// Wall-clock millis-since-epoch when the snapshot was generated.
   final DateTime timestamp;
 
-  /// Friendly per-platform aggregation. Combines TikTok variants and FB +
-  /// FB Lite into a single bucket so the dashboard does not have to.
+  /// Friendly per-platform aggregation. Combines FB + FB Lite into a single
+  /// bucket so the dashboard does not have to.
+  ///
+  /// NOTE: Only the currently supported platforms (Instagram Reels, YouTube
+  /// Shorts, Facebook Reels) are surfaced. TikTok/Snapchat are intentionally
+  /// omitted for now and can be re-added alongside their enum values.
   Map<ReelPlatform, int> get byPlatform {
     final int instagram = perApp['com.instagram.android'] ?? 0;
     final int youtube = perApp['com.google.android.youtube'] ?? 0;
-    final int tiktok = (perApp['com.zhiliaoapp.musically'] ?? 0) +
-        (perApp['com.ss.android.ugc.trill'] ?? 0);
-    final int snapchat = perApp['com.snapchat.android'] ?? 0;
     final int facebook =
         (perApp['com.facebook.katana'] ?? 0) + (perApp['com.facebook.lite'] ?? 0);
     return {
       ReelPlatform.instagram: instagram,
       ReelPlatform.youtubeShorts: youtube,
-      ReelPlatform.tiktok: tiktok,
-      ReelPlatform.snapchatSpotlight: snapchat,
       ReelPlatform.facebookReels: facebook,
     };
   }
@@ -104,11 +103,13 @@ class ReelCountDay extends Equatable {
 
 /// Friendly identifier for the apps we track. Maps to one or more package
 /// names on the native side.
+///
+/// Currently limited to Instagram Reels, YouTube Shorts and Facebook Reels.
+/// TikTok / Snapchat support is paused for now — re-add the enum values (and
+/// their detectors + switch cases) when bringing those platforms back.
 enum ReelPlatform {
   instagram,
   youtubeShorts,
-  tiktok,
-  snapchatSpotlight,
   facebookReels,
 }
 
@@ -116,8 +117,6 @@ extension ReelPlatformX on ReelPlatform {
   String get label => switch (this) {
         ReelPlatform.instagram => 'Instagram Reels',
         ReelPlatform.youtubeShorts => 'YouTube Shorts',
-        ReelPlatform.tiktok => 'TikTok',
-        ReelPlatform.snapchatSpotlight => 'Snap Spotlight',
         ReelPlatform.facebookReels => 'Facebook Reels',
       };
 }

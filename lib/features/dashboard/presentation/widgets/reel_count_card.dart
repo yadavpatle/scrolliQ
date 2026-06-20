@@ -115,7 +115,7 @@ class ReelCountCard extends ConsumerWidget {
           ] else ...[
             const SizedBox(height: 12),
             const Text(
-              'No reels yet today. Open Instagram, TikTok, or YouTube Shorts to start.',
+              'No reels yet today. Open Instagram, YouTube Shorts, or Facebook Reels to start.',
               style: TextStyle(
                 color: AppColors.textTertiaryDark,
                 fontSize: 12,
@@ -157,8 +157,6 @@ class _PlatformRow extends StatelessWidget {
   String _icon(ReelPlatform p) => switch (p) {
         ReelPlatform.instagram => '📷',
         ReelPlatform.youtubeShorts => '▶️',
-        ReelPlatform.tiktok => '🎵',
-        ReelPlatform.snapchatSpotlight => '👻',
         ReelPlatform.facebookReels => '📘',
       };
 }

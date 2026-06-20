@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/mascot.dart';
 import '../../../../shared/widgets/stat_pill.dart';
 import '../../../usage_tracking/domain/entities/daily_usage.dart';
 import '../../domain/brain_score_calculator.dart';
@@ -106,6 +107,7 @@ class BrainScoreCard extends StatelessWidget {
                 child: _ScoreGauge(
                   value: usage.brainScore / 100,
                   color: accent,
+                  mood: _moodForCategory(cat),
                 ),
               ),
             ],
@@ -123,6 +125,14 @@ class BrainScoreCard extends StatelessWidget {
         BrainCategory.brainMelt    => AppColors.scoreBrainMelt,
       };
 
+  MascotMood _moodForCategory(BrainCategory c) => switch (c) {
+        BrainCategory.focusMaster  => MascotMood.ecstatic,
+        BrainCategory.healthy      => MascotMood.happy,
+        BrainCategory.distracted   => MascotMood.neutral,
+        BrainCategory.doomscroller => MascotMood.sad,
+        BrainCategory.brainMelt    => MascotMood.melting,
+      };
+
   String _subtitleForCategory(BrainCategory c) => switch (c) {
         BrainCategory.focusMaster  => 'Sharp and intentional. Keep flowing.',
         BrainCategory.healthy      => 'Solid focus. A little drift is fine.',
@@ -134,11 +144,16 @@ class BrainScoreCard extends StatelessWidget {
 
 /// Radial gauge: 270° arc with track + animated value stroke.
 class _ScoreGauge extends StatelessWidget {
-  const _ScoreGauge({required this.value, required this.color});
+  const _ScoreGauge({
+    required this.value,
+    required this.color,
+    required this.mood,
+  });
 
   /// Score value 0..1.
   final double value;
   final Color color;
+  final MascotMood mood;
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +164,7 @@ class _ScoreGauge extends StatelessWidget {
       builder: (_, v, __) => CustomPaint(
         painter: _GaugePainter(value: v, color: color),
         child: Center(
-          child: Icon(Icons.bolt_rounded, color: color, size: 28),
+          child: Mascot(mood: mood, size: 62, color: color),
         ),
       ),
     );

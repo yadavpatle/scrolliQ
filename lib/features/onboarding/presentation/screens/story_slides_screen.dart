@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/app_buttons.dart';
+import '../../../../shared/widgets/mascot.dart';
 import '../../data/onboarding_content.dart';
 import '../../domain/onboarding_data.dart';
 
@@ -96,8 +97,11 @@ class _SlideBody extends StatelessWidget {
             ),
           ],
 
-          // Emoji hero
-          if (slide.emoji != null) ...[
+          // Hero illustration: mascot (preferred) or emoji fallback.
+          if (slide.mascotMood != null) ...[
+            const SizedBox(height: 32),
+            Mascot(mood: slide.mascotMood!, size: 148),
+          ] else if (slide.emoji != null) ...[
             const SizedBox(height: 32),
             Text(slide.emoji!, style: const TextStyle(fontSize: 80)),
           ],

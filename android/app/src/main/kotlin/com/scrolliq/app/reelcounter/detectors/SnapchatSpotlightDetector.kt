@@ -13,6 +13,8 @@ class SnapchatSpotlightDetector : ReelDetector {
     @Volatile private var inSpotlight: Boolean = false
     @Volatile private var lastInFeedAt: Long = 0L
 
+    override val isInReelFeed: Boolean get() = inSpotlight
+
     private val pagerIds = listOf(
         "spotlight",
         "ngs_spotlight_recycler_view",
@@ -28,7 +30,8 @@ class SnapchatSpotlightDetector : ReelDetector {
         if (ReelNodeUtil.anyIdContains(root, pagerIds, maxNodes = 200)) {
             inSpotlight = true
             lastInFeedAt = nowWall
-        } else if (nowWall - lastInFeedAt > 3_000L) {
+        } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            nowWall - lastInFeedAt > 1_200L) {
             inSpotlight = false
         }
 

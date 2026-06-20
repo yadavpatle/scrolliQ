@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../core/theme/app_colors.dart';
+import 'mascot.dart';
 
 class AppLoading extends StatelessWidget {
   const AppLoading({super.key, this.message});
@@ -13,11 +14,15 @@ class AppLoading extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(message!, style: const TextStyle(color: AppColors.textSecondaryDark)),
-          ],
+          const Mascot(mood: MascotMood.thinking, size: 96),
+          const SizedBox(height: 8),
+          Text(
+            message ?? 'Thinking…',
+            style: const TextStyle(
+              color: AppColors.textSecondaryDark,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/mascot.dart';
+
 /// One story slide in the onboarding flow.
 class OnboardingSlide {
   const OnboardingSlide({
@@ -8,6 +10,7 @@ class OnboardingSlide {
     this.reelCount,
     this.reelCountColor,
     this.emoji,
+    this.mascotMood,
     this.chips,
     this.benefits,
   });
@@ -21,6 +24,10 @@ class OnboardingSlide {
 
   /// Large emoji codepoint string shown as the hero illustration.
   final String? emoji;
+
+  /// If set, the mascot is shown as the hero illustration with this emotion
+  /// (takes precedence over [emoji]).
+  final MascotMood? mascotMood;
 
   /// Goal chips (slide 7).
   final List<GoalChip>? chips;

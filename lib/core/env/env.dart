@@ -15,6 +15,10 @@ class Env {
   static String get postHogApiKey     => dotenv.maybeGet('POSTHOG_API_KEY') ?? '';
   static String get postHogHost       => dotenv.maybeGet('POSTHOG_HOST') ?? 'https://us.i.posthog.com';
 
+  /// Base URL used to build shareable referral/invite links, e.g.
+  /// `https://scrolliq.app` → `https://scrolliq.app/invite?ref=ABCD1234`.
+  static String get referralBaseUrl   => dotenv.maybeGet('REFERRAL_BASE_URL') ?? 'https://scrolliq.app';
+
   static String _required(String key) {
     final value = dotenv.maybeGet(key);
     if (value == null || value.isEmpty) {

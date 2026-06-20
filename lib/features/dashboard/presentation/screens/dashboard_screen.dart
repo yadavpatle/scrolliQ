@@ -9,6 +9,7 @@ import '../../../../shared/utils/formatters.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_error.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/mascot.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../../shared/widgets/stat_pill.dart';
 import '../../../../shared/widgets/user_avatar.dart';
@@ -35,6 +36,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Instantiate the overlay controller on first load so the HUD auto-starts
+    // (default-on) when overlay permission is already granted.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(overlayControllerProvider.notifier).refresh();
+    });
   }
 
   @override
@@ -323,10 +329,26 @@ class _PreviewList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
       return const AppCard(
-        padding: EdgeInsets.all(20),
-        child: Text(
-          'No leaderboard data yet today.',
-          style: TextStyle(color: AppColors.textSecondaryDark),
+        padding: EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        child: Column(
+          children: [
+            Mascot(mood: MascotMood.sleepy, size: 84),
+            SizedBox(height: 12),
+            Text(
+              'No leaderboard data yet today.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textSecondaryDark),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Be the first to set a Brain Score.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textTertiaryDark,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
       );
     }

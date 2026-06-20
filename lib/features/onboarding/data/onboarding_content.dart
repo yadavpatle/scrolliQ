@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/mascot.dart';
 import '../domain/onboarding_data.dart';
 
 /// The 9 story slides shown before permissions.
@@ -8,35 +9,36 @@ const kStorySlides = <OnboardingSlide>[
   // 1. Hook
   OnboardingSlide(
     headline: 'See your reels count',
-    subtitle: 'Instagram • YouTube • TikTok • Snapchat • Facebook',
+    subtitle: 'Instagram • YouTube • Facebook',
+    mascotMood: MascotMood.happy,
   ),
   // 2. Fresh start
   OnboardingSlide(
     headline: 'Your brain starts\nfresh every day',
     reelCount: 0,
     reelCountColor: AppColors.accent,
-    emoji: '🧠',
+    mascotMood: MascotMood.ecstatic,
   ),
   // 3. Scrolling begins
   OnboardingSlide(
     headline: 'Then you start\nscrolling.',
     reelCount: 21,
     reelCountColor: AppColors.accent,
-    emoji: '📱',
+    mascotMood: MascotMood.neutral,
   ),
   // 4. Drain
   OnboardingSlide(
     headline: 'Every reel drains\nyour brain more.',
     reelCount: 100,
     reelCountColor: AppColors.secondary,
-    emoji: '😵‍💫',
+    mascotMood: MascotMood.sad,
   ),
   // 5. Focus drops (red zone)
   OnboardingSlide(
     headline: 'Your ability to\nfocus drops.',
     reelCount: 500,
     reelCountColor: AppColors.danger,
-    emoji: '🧟',
+    mascotMood: MascotMood.melting,
   ),
   // 6. What matters
   OnboardingSlide(
@@ -52,7 +54,7 @@ const kStorySlides = <OnboardingSlide>[
   // 7. Empowerment
   OnboardingSlide(
     headline: 'You decide when\nto stop.\nNot the algorithm.',
-    emoji: '😎',
+    mascotMood: MascotMood.ecstatic,
   ),
   // 8. Privacy
   OnboardingSlide(
@@ -63,6 +65,7 @@ const kStorySlides = <OnboardingSlide>[
   OnboardingSlide(
     headline: "Within a week,\nyou'll scroll less.",
     subtitle: 'And your mind will feel clearer.',
+    mascotMood: MascotMood.celebrating,
     benefits: [
       Benefit('😴', 'Sleep calmly'),
       Benefit('📖', 'Focus better'),

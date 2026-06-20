@@ -15,4 +15,4 @@
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
     android:description="@string/reel_counter_service_description"
-    android:packageNames="com.instagram.android,com.google.android.youtube,com.zhiliaoapp.musically,com.ss.android.ugc.trill,com.snapchat.android,com.facebook.katana,com.facebook.lite" />
+    android:packageNames="com.instagram.android,com.google.android.youtube,com.facebook.katana,com.facebook.lite" />

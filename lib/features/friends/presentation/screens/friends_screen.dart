@@ -6,6 +6,7 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_error.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/user_avatar.dart';
+import '../../../referral/providers.dart';
 import '../../domain/entities/friendship.dart';
 import '../../providers.dart';
 
@@ -19,6 +20,13 @@ class FriendsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Friends'),
+          actions: [
+            IconButton(
+              tooltip: 'Invite a friend',
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              onPressed: () => ref.read(referralServiceProvider).shareInvite(),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Friends'),

@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
+import '../../../../shared/widgets/mascot.dart';
 import '../../providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -243,19 +243,11 @@ class _BrandRow extends StatelessWidget {
   const _BrandRow();
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            gradient: AppColors.brandGradient,
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          ),
-          child: const Icon(Icons.bolt_rounded, color: AppColors.onPrimary, size: 22),
-        ),
-        const SizedBox(width: 10),
-        const Text(
+        Mascot(mood: MascotMood.happy, size: 40),
+        SizedBox(width: 10),
+        Text(
           'ScrollIQ',
           style: TextStyle(
             fontSize: 18,

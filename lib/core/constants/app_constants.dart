@@ -6,14 +6,13 @@ class AppConstants {
   static const String tagline = 'Reclaim your attention.';
 
   // Tracked Android package names (extendable).
+  // Currently limited to Instagram, YouTube and Facebook. TikTok / Snapchat /
+  // X are paused for now and can be re-added here when support returns.
   static const Map<String, String> trackedApps = {
     'com.instagram.android': 'Instagram',
-    'com.zhiliaoapp.musically': 'TikTok',
-    'com.ss.android.ugc.trill': 'TikTok',
     'com.google.android.youtube': 'YouTube',
     'com.facebook.katana': 'Facebook',
-    'com.twitter.android': 'X',
-    'com.snapchat.android': 'Snapchat',
+    'com.facebook.lite': 'Facebook',
   };
 
   // Default penalty thresholds (minutes / hours).
@@ -25,4 +24,9 @@ class AppConstants {
   // Onboarding storage keys.
   static const String prefOnboardingDone = 'onboarding_done';
   static const String prefUsagePermissionAsked = 'usage_permission_asked';
+
+  /// Whether the floating HUD bubble should run. Defaults to ON — the overlay
+  /// auto-starts whenever the "display over other apps" permission is granted.
+  /// Set to false only when the user explicitly turns the HUD off.
+  static const String prefHudEnabled = 'hud_enabled';
 }

@@ -46,6 +46,15 @@ class OverlayService : Service() {
         updateCount(snapshot.total)
     }
 
+    /**
+     * The bubble should only be visible while the user is actively scrolling
+     * a reel / short feed. [ReelFeedState] is updated by the accessibility
+     * service and auto-decays when events stop arriving.
+     */
+    private val feedListener = ReelFeedState.Listener { inReelFeed ->
+        applyVisibility(inReelFeed)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -70,8 +79,13 @@ class OverlayService : Service() {
                 if (bubbleView == null) attachBubble()
                 ReelCounterStore.removeListener(storeListener)
                 ReelCounterStore.addListener(storeListener)
+                ReelFeedState.removeListener(feedListener)
+                ReelFeedState.addListener(feedListener)
                 // Push current value immediately so the bubble doesn't show stale 0.
                 updateCount(ReelCounterStore.snapshot().total)
+                // Seed visibility from the current feed-state reading. The
+                // listener will keep it in sync from here on.
+                applyVisibility(ReelFeedState.isInReelFeed())
             }
         }
         // Sticky so Android brings us back if memory is reclaimed; user can
@@ -86,6 +100,7 @@ class OverlayService : Service() {
 
     private fun stopSelfAndCleanup() {
         ReelCounterStore.removeListener(storeListener)
+        ReelFeedState.removeListener(feedListener)
         try {
             bubbleView?.let { windowManager.removeView(it) }
         } catch (_: Throwable) { /* already detached */ }
@@ -110,6 +125,9 @@ class OverlayService : Service() {
         screenHeightPx = metrics.heightPixels
 
         val view = LayoutInflater.from(this).inflate(R.layout.overlay_bubble, null, false)
+        // Start hidden — the pill should only appear once the accessibility
+        // service confirms the user is actually on a reel / short feed.
+        view.visibility = View.GONE
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -135,6 +153,20 @@ class OverlayService : Service() {
             bubbleView = null
             layoutParams = null
             stopSelfAndCleanup()
+        }
+    }
+
+    /**
+     * Toggle the bubble between visible and hidden without removing it from
+     * the window manager — keeps the foreground service alive (Android
+     * requires it for TYPE_APPLICATION_OVERLAY) while still keeping the pill
+     * out of the user's way when they are not on a reel surface.
+     */
+    private fun applyVisibility(inReelFeed: Boolean) {
+        val view = bubbleView ?: return
+        view.post {
+            val target = if (inReelFeed) View.VISIBLE else View.GONE
+            if (view.visibility != target) view.visibility = target
         }
     }
 

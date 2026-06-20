@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../reel_counter/providers.dart';
+import '../../../referral/providers.dart';
 import 'challenge_friends_screen.dart';
 import 'demo_screen.dart';
 import 'permissions_screen.dart';
@@ -33,6 +34,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  /// Opens the share sheet with an invite link, then advances regardless of
+  /// whether the user actually shared (so the flow never gets stuck).
+  Future<void> _shareAndAdvance() async {
+    await ref.read(referralServiceProvider).shareInvite();
+    if (!mounted) return;
+    _advance();
+  }
+
   Future<void> _finish() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AppConstants.prefOnboardingDone, true);
@@ -56,7 +65,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         1 => PermissionsScreen(key: const ValueKey(1), onComplete: _advance),
         2 => ChallengeFriendsScreen(
             key: const ValueKey(2),
-            onChallenge: _advance, // TODO: share link before advance
+            onChallenge: _shareAndAdvance,
             onSkip: _advance,
           ),
         _ => DemoScreen(key: const ValueKey(3), onComplete: _finish),

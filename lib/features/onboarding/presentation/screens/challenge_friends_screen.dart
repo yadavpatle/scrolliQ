@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/mascot.dart';
 
 /// "Challenge Friends" promo shown after permissions.
 /// [onChallenge] — user taps "Challenge Your Friend" → deeplink / share.
@@ -49,12 +50,20 @@ class ChallengeFriendsScreen extends StatelessWidget {
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _Avatar(label: 'YOU', count: 36, color: AppColors.success),
+                  _Avatar(
+                      label: 'YOU',
+                      count: 36,
+                      color: AppColors.success,
+                      mood: MascotMood.ecstatic),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Text('⚡', style: TextStyle(fontSize: 36)),
                   ),
-                  _Avatar(label: 'FRIEND', count: 93, color: AppColors.danger),
+                  _Avatar(
+                      label: 'FRIEND',
+                      count: 93,
+                      color: AppColors.danger,
+                      mood: MascotMood.melting),
                 ],
               ),
               const Spacer(flex: 3),
@@ -91,19 +100,25 @@ class ChallengeFriendsScreen extends StatelessWidget {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.label, required this.count, required this.color});
+  const _Avatar({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.mood,
+  });
   final String label;
   final int count;
   final Color color;
+  final MascotMood mood;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 38,
           backgroundColor: AppColors.surfaceDark2,
-          child: Text('🧠', style: TextStyle(fontSize: 32)),
+          child: Mascot(mood: mood, size: 60),
         ),
         const SizedBox(height: 8),
         Container(

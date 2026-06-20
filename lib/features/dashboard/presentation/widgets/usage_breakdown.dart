@@ -17,7 +17,7 @@ class UsageBreakdown extends StatelessWidget {
       _Item('Total',     usage.totalMinutes,     Icons.smartphone_rounded, AppColors.primary),
       _Item('Instagram', usage.instagramMinutes, Icons.camera_alt_rounded, const Color(0xFFFF4D8B)),
       _Item('YouTube',   usage.youtubeMinutes,   Icons.play_arrow_rounded, const Color(0xFFFF5252)),
-      _Item('TikTok',    usage.tiktokMinutes,    Icons.music_note_rounded, const Color(0xFF7DE0BD)),
+      _Item('Facebook',  usage.facebookMinutes,  Icons.facebook_rounded,   const Color(0xFF4267B2)),
     ];
 
     return GridView.count(

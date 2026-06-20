@@ -84,36 +84,84 @@ class MainActivity : FlutterActivity() {
 
     /**
      * Returns a list of {packageName, appName, totalTimeMs} for the given window.
-     * Uses INTERVAL_DAILY which aggregates by day.
+     *
+     * Uses event-based accounting (ACTIVITY_RESUMED / ACTIVITY_PAUSED pairs) per
+     * package rather than [UsageStatsManager.queryUsageStats] with
+     * INTERVAL_DAILY. The daily buckets returned by queryUsageStats routinely
+     * overlap or extend beyond the requested [start, end] window, which inflates
+     * and sometimes double-counts per-app totals (numbers end up far higher than
+     * Android's Digital Wellbeing). Computing foreground durations from the event
+     * stream keeps results bounded to [start, end] and consistent with
+     * [queryRangeMinutes].
      */
     private fun queryUsage(start: Long, end: Long): List<Map<String, Any>> {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val pm: PackageManager = packageManager
 
-        val stats = usm.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            start,
-            end
-        ) ?: return emptyList()
+        // Callers pass the end of the calendar day (23:59:59) as `end`. Clamp it
+        // to the present so the still-foreground app isn't credited with future
+        // time (which previously inflated "today" by many hours).
+        val now = System.currentTimeMillis()
+        val safeEnd = if (end > now) now else end
 
-        // Aggregate by package (queryUsageStats can return multiple buckets).
         val totals = HashMap<String, Long>()
-        for (s in stats) {
-            if (s.totalTimeInForeground <= 0) continue
-            totals[s.packageName] =
-                (totals[s.packageName] ?: 0L) + s.totalTimeInForeground
+
+        // Single foreground timeline: only one app is in the foreground at a
+        // time. We track the currently-foreground package and the timestamp it
+        // came to the foreground, then attribute the elapsed time to it when the
+        // foreground changes (next RESUMED) or it gets PAUSED (e.g. screen off).
+        //
+        // The earlier per-package approach counted every dangling RESUMED up to
+        // `now`, so several apps each accrued hours in parallel and the total
+        // ballooned far beyond real screen time. Modelling a single timeline
+        // removes that overlap.
+        var curPkg: String? = null
+        var curStart = 0L
+
+        fun closeSegment(at: Long) {
+            val pkg = curPkg ?: return
+            val delta = (at - curStart).coerceAtLeast(0)
+            if (delta > 0) totals[pkg] = (totals[pkg] ?: 0L) + delta
+            curPkg = null
         }
 
-        return totals.entries.map { (pkg, ms) ->
-            val label = try {
-                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-            } catch (_: Exception) { pkg }
-            mapOf(
-                "packageName" to pkg,
-                "appName"     to label,
-                "totalTimeMs" to ms,
-            )
+        val events = usm.queryEvents(start, safeEnd)
+        val ev = android.app.usage.UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(ev)
+            val pkg = ev.packageName ?: continue
+            when (ev.eventType) {
+                android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> {
+                    // Foreground handed over to `pkg`: close out whoever was
+                    // foreground before, then start a new segment.
+                    closeSegment(ev.timeStamp)
+                    curPkg = pkg
+                    curStart = ev.timeStamp
+                }
+                android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> {
+                    // Only the current foreground app pausing ends the segment
+                    // (covers screen-off / lock with no following RESUMED).
+                    if (pkg == curPkg) closeSegment(ev.timeStamp)
+                }
+            }
         }
+
+        // Whatever is still in the foreground when the window closes is counted
+        // up to `now` — exactly one app, not every dangling resume.
+        closeSegment(safeEnd)
+
+        return totals.entries
+            .filter { it.value > 0L }
+            .map { (pkg, ms) ->
+                val label = try {
+                    pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+                } catch (_: Exception) { pkg }
+                mapOf(
+                    "packageName" to pkg,
+                    "appName"     to label,
+                    "totalTimeMs" to ms,
+                )
+            }
     }
 
     /**

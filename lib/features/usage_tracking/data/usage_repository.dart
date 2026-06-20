@@ -53,12 +53,12 @@ class UsageRepository {
   DailyUsage _mergeReels(DailyUsage usage, ReelCountSnapshot? snap) {
     if (snap == null || snap.total == 0) return usage;
     final byPlatform = snap.byPlatform;
+    // Only the supported platforms are populated. TikTok/Snapchat columns
+    // stay at their existing values (0) until support is re-enabled.
     return usage.copyWith(
-      instagramReels:    byPlatform[ReelPlatform.instagram] ?? 0,
-      youtubeShorts:     byPlatform[ReelPlatform.youtubeShorts] ?? 0,
-      tiktokReels:       byPlatform[ReelPlatform.tiktok] ?? 0,
-      snapchatSpotlight: byPlatform[ReelPlatform.snapchatSpotlight] ?? 0,
-      facebookReels:     byPlatform[ReelPlatform.facebookReels] ?? 0,
+      instagramReels: byPlatform[ReelPlatform.instagram] ?? 0,
+      youtubeShorts:  byPlatform[ReelPlatform.youtubeShorts] ?? 0,
+      facebookReels:  byPlatform[ReelPlatform.facebookReels] ?? 0,
     );
   }
 
