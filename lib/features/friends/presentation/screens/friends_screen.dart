@@ -21,10 +21,19 @@ class FriendsScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('Friends'),
           actions: [
-            IconButton(
-              tooltip: 'Invite a friend',
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-              onPressed: () => ref.read(referralServiceProvider).shareInvite(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: TextButton.icon(
+                onPressed: () =>
+                    ref.read(referralServiceProvider).shareInvite(),
+                icon: const Icon(Icons.ios_share, size: 18),
+                label: const Text('Invite'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
           ],
           bottom: const TabBar(
@@ -59,7 +68,57 @@ class _FriendsTab extends ConsumerWidget {
       loading: () => _shimmerList(),
       error:   (e, _) => AppError(message: e.toString()),
       data: (items) {
-        if (items.isEmpty) return const _Empty(message: 'No friends yet.');
+        if (items.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(friendsListProvider),
+            color: AppColors.primary,
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                const SizedBox(height: 32),
+                const Icon(
+                  Icons.group_add_outlined,
+                  size: 56,
+                  color: AppColors.textSecondaryDark,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No friends yet',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Invite friends to compare Brain Scores and challenge '
+                  'each other to scroll less.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textSecondaryDark),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () =>
+                      ref.read(referralServiceProvider).shareInvite(),
+                  icon: const Icon(Icons.ios_share),
+                  label: const Text('Invite a friend'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         return RefreshIndicator(
           onRefresh: () async => ref.invalidate(friendsListProvider),
           color: AppColors.primary,

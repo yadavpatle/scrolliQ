@@ -92,7 +92,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="scrolliq.app"
+                    android:host="scroll-iq.vercel.app"
                     android:pathPrefix="/invite" />
             </intent-filter>
         </activity>
