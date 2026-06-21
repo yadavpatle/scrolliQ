@@ -44,14 +44,14 @@ class ReferralService {
     // 1. Cold-start link (app launched by tapping an invite).
     try {
       final initial = await _appLinks.getInitialLink();
-      if (initial != null) await _handleUri(initial);
+      if (initial != null) await handleUri(initial);
     } catch (e) {
       debugPrint('Referral: initial link failed: $e');
     }
 
     // 2. Links received while the app is already running.
     _linkSub = _appLinks.uriLinkStream.listen(
-      _handleUri,
+      handleUri,
       onError: (Object e) => debugPrint('Referral: link stream error: $e'),
     );
 
@@ -78,16 +78,19 @@ class ReferralService {
   // ---------------------------------------------------------------------------
 
   /// Opens the system share sheet with the current user's invite link.
-  /// Falls back to a generic app link when the user isn't signed in yet
-  /// (e.g. during onboarding, before a referral code has been assigned).
+  /// Falls back to the generic `/invite` landing page when the user isn't
+  /// signed in yet (e.g. during onboarding, before a referral code has been
+  /// assigned). The friend can still install the app from that URL — they
+  /// just won't be auto-friended without a `ref` code.
   /// Returns false if the share sheet could not be opened.
   Future<bool> shareInvite() async {
     String link;
     try {
       link = await _repo.myReferralLink();
     } catch (_) {
-      // Not signed in / no code yet — share the plain app link.
-      link = Env.referralBaseUrl;
+      // Not signed in / no code yet — share the generic invite landing page
+      // so the URL still matches the deep-link intent filter (`/invite`).
+      link = '${Env.referralBaseUrl}/invite';
     }
     try {
       await SharePlus.instance.share(
@@ -109,7 +112,13 @@ class ReferralService {
   // Internals
   // ---------------------------------------------------------------------------
 
-  Future<void> _handleUri(Uri uri) async {
+  /// Captures a referral code from [uri] (if any), persists it locally, and
+  /// — when the user is already signed in — redeems it immediately.
+  ///
+  /// Public so the router can forward HTTPS/web deep-link entries (e.g. when
+  /// the OS launches the app on `https://…/invite?ref=CODE` and Flutter seeds
+  /// it as the initial route) into the same pipeline as `app_links`.
+  Future<void> handleUri(Uri uri) async {
     final code = ReferralRepository.parseCode(uri);
     if (code == null) return;
     await _storePending(code);

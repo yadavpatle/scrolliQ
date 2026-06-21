@@ -9,6 +9,7 @@ import '../../../../shared/widgets/user_avatar.dart';
 import '../../../referral/providers.dart';
 import '../../domain/entities/friendship.dart';
 import '../../providers.dart';
+import '../widgets/invite_code_card.dart';
 
 class FriendsScreen extends ConsumerWidget {
   const FriendsScreen({super.key});
@@ -260,6 +261,12 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
     final results = ref.watch(userSearchProvider(_query));
     return CustomScrollView(
       slivers: [
+        const SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+          sliver: SliverToBoxAdapter(
+            child: InviteCodeCard(),
+          ),
+        ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           sliver: SliverToBoxAdapter(

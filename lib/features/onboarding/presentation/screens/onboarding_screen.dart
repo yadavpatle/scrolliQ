@@ -5,14 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../reel_counter/providers.dart';
-import '../../../referral/providers.dart';
-import 'challenge_friends_screen.dart';
 import 'demo_screen.dart';
 import 'permissions_screen.dart';
 import 'story_slides_screen.dart';
 
-/// Orchestrates the 4-phase onboarding:
-///   Story (9 slides) → Permissions → Challenge Friends → Open YouTube demo
+/// Orchestrates the 3-phase pre-login onboarding:
+///   Story (9 slides) → Permissions → Open YouTube demo
+///
+/// The "Challenge Friends" prompt has been moved to [PostLoginInviteScreen]
+/// (route `/welcome-invite`), which runs *after* sign-in so the shared invite
+/// link can carry a real `?ref=<CODE>` from the new account's `referral_code`.
 ///
 /// Uses a simple int stepper rather than nested routes because the flow is
 /// linear and animations should be cross-fade, not slide.
@@ -24,22 +26,14 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  int _step = 0; // 0=story, 1=perms, 2=challenge, 3=demo
+  int _step = 0; // 0=story, 1=perms, 2=demo
 
   void _advance() {
-    if (_step < 3) {
+    if (_step < 2) {
       setState(() => _step++);
     } else {
       _finish();
     }
-  }
-
-  /// Opens the share sheet with an invite link, then advances regardless of
-  /// whether the user actually shared (so the flow never gets stuck).
-  Future<void> _shareAndAdvance() async {
-    await ref.read(referralServiceProvider).shareInvite();
-    if (!mounted) return;
-    _advance();
   }
 
   Future<void> _finish() async {
@@ -53,6 +47,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (state.canDraw) await overlay.start();
 
     if (!mounted) return;
+    // Send to login. After sign-in, the router will gate `/welcome-invite`
+    // (Challenge Friends with a real referral link) before `/home`.
     context.go('/login');
   }
 
@@ -63,12 +59,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       child: switch (_step) {
         0 => StorySlides(key: const ValueKey(0), onComplete: _advance),
         1 => PermissionsScreen(key: const ValueKey(1), onComplete: _advance),
-        2 => ChallengeFriendsScreen(
-            key: const ValueKey(2),
-            onChallenge: _shareAndAdvance,
-            onSkip: _advance,
-          ),
-        _ => DemoScreen(key: const ValueKey(3), onComplete: _finish),
+        _ => DemoScreen(key: const ValueKey(2), onComplete: _finish),
       },
     );
   }

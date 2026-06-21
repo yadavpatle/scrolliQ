@@ -25,6 +25,13 @@ class AppConstants {
   static const String prefOnboardingDone = 'onboarding_done';
   static const String prefUsagePermissionAsked = 'usage_permission_asked';
 
+  /// Whether the post-login "Challenge Friends" welcome screen has been shown
+  /// to the current device. Set to `true` after the user either shares an
+  /// invite or taps "I'll Do It Later". Existing users (who finished
+  /// onboarding before this screen existed) are auto-migrated to `true` on
+  /// first launch so they aren't shown an unexpected screen.
+  static const String prefPostLoginInviteShown = 'post_login_invite_shown';
+
   /// Whether the floating HUD bubble should run. Defaults to ON — the overlay
   /// auto-starts whenever the "display over other apps" permission is granted.
   /// Set to false only when the user explicitly turns the HUD off.

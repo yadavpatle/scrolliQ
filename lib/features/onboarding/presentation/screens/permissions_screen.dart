@@ -10,10 +10,20 @@ import '../../domain/onboarding_data.dart';
 
 /// Shows 4 permissions, each with "Allow" button or checkmark.
 /// Bottom CTA "Why should I give this permission?" expandable.
-/// [onComplete] fires after user has granted at least accessibility.
+///
+/// Two modes:
+///   * **Onboarding mode** — pass [onComplete]; screen renders without an
+///     AppBar and shows a bottom "Continue" button that fires the callback.
+///     Onboarding requires this step, so it always provides a non-null
+///     callback here.
+///   * **Standalone / settings mode** — leave [onComplete] null; screen
+///     renders with an AppBar (back arrow) so it can be pushed from the
+///     Profile screen any time the user wants to review or change permissions.
 class PermissionsScreen extends ConsumerStatefulWidget {
-  const PermissionsScreen({super.key, required this.onComplete});
-  final VoidCallback onComplete;
+  const PermissionsScreen({super.key, this.onComplete});
+
+  /// If null, the screen renders in standalone mode (AppBar + no Continue CTA).
+  final VoidCallback? onComplete;
 
   @override
   ConsumerState<PermissionsScreen> createState() => _PermissionsScreenState();
@@ -76,24 +86,57 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final standalone = widget.onComplete == null;
     return Scaffold(
       backgroundColor: AppColors.bgDark,
+      appBar: standalone
+          ? AppBar(
+              backgroundColor: AppColors.bgDark,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              title: const Text(
+                'Permissions',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            )
+          : null,
       body: SafeArea(
+        top: !standalone,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 32),
-              const Text(
-                'Enable permissions to\nstart counting reels',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  height: 1.3,
+              SizedBox(height: standalone ? 8 : 32),
+              if (standalone) ...[
+                const Text(
+                  'Manage app permissions',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    height: 1.3,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Toggle these any time. ScrollIQ needs them to count reels and track screen time.',
+                  style: TextStyle(
+                    color: AppColors.textSecondaryDark,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ] else
+                const Text(
+                  'Enable permissions to\nstart counting reels',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    height: 1.3,
+                  ),
+                ),
               const SizedBox(height: 32),
               ...kPermissions.map((p) => _PermRow(
                     item: p,
@@ -103,7 +146,11 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen>
               const Spacer(),
               _WhyBanner(),
               const SizedBox(height: 16),
-              PrimaryButton(label: 'Continue', onPressed: widget.onComplete),
+              if (!standalone)
+                PrimaryButton(
+                  label: 'Continue',
+                  onPressed: widget.onComplete!,
+                ),
               const SizedBox(height: 24),
             ],
           ),

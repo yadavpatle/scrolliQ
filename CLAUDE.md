@@ -26,7 +26,8 @@ lib/
 ├── core/                     # theme, router, env, DI, constants, errors
 ├── features/
 │   ├── auth/                 # Google + email sign-in (Supabase ID-token flow)
-│   ├── onboarding/           # 9-slide story → permissions → challenge → demo
+│   ├── onboarding/           # 9-slide story → permissions → demo (pre-login)
+│                             # + post-login welcome-invite (Challenge Friends w/ real ?ref=CODE)
 │   ├── usage_tracking/       # UsageStatsManager bridge (minutes per app)
 │   ├── reel_counter/         # AccessibilityService bridge (individual reel counts)
 │   ├── dashboard/            # Brain Score + ReelCountCard + ForecastCard + TrendChart
@@ -261,12 +262,48 @@ Project ref: `xnqswsdmkbbunomaizks` (ScrolliQ HQ, Seoul region)
 
 ## Onboarding Flow (Phase C)
 
+Two-phase flow split across the auth boundary so the post-login share carries
+a real referral code rather than a generic homepage URL.
+
+### Pre-login (`OnboardingScreen`, route `/onboarding`)
+
 1. **Story slides** (9 pages): Hook → 0 reels → 21 reels → 100 reels → 500+ reels (red) → goals chips → empowerment → privacy → promise
 2. **Permissions screen**: 4 rows (Accessibility, Overlay, Battery, Usage Stats) — each with Allow/✓
-3. **Challenge Friends**: VS illustration, CTA + skip
-4. **Demo**: "Open YouTube to see ScrollIQ in action" → launches YouTube Shorts
+3. **Demo**: "Open YouTube to see ScrollIQ in action" → launches YouTube Shorts so the user sees the HUD bubble counting live (requires Accessibility + Overlay → that's why permissions come *before* the demo)
 
-On finish: saves `onboarding_done` pref, auto-starts overlay bubble.
+On finish: persists `onboarding_done`, auto-starts the overlay bubble if the
+permission was granted, then `context.go('/login')`.
+
+### Post-login (`PostLoginInviteScreen`, route `/welcome-invite`)
+
+A one-time "Challenge Friends" prompt shown the first time a user is
+authenticated on the device. Wraps `ChallengeFriendsScreen` so the visual
+design is unchanged.
+
+- **Why post-login:** the `referral_code` column is populated by the
+  `handle_new_user` Postgres trigger when Supabase auth creates the row, so
+  `ReferralService.shareInvite()` can only build a real
+  `https://.../invite?ref=<CODE>` link *after* sign-in. Sharing during
+  onboarding produced a useless link with no referral attribution — see
+  commit history.
+- **Gate:** the GoRouter's `redirect` checks `PostLoginInviteController.shown`
+  and forces `/welcome-invite` for any authenticated user who hasn't seen it,
+  before letting them reach `/home` or any shell route.
+- **Migration:** users who finished onboarding before this screen existed
+  (`prefOnboardingDone=true`, no invite flag) are auto-marked as already shown
+  on first launch — no jarring screen on update.
+- Both *Challenge Your Friend* and *I'll Do It Later* persist
+  `post_login_invite_shown=true` and the router refresh redirects on to
+  `/home`.
+
+### State
+
+- `AppConstants.prefOnboardingDone` — gates the pre-login flow.
+- `AppConstants.prefPostLoginInviteShown` — gates the post-login flow.
+- `PostLoginInviteController` (`features/onboarding/providers.dart`) is a
+  `ChangeNotifier` exposed via `postLoginInviteControllerProvider` and wired
+  into the router's `refreshListenable` (merged with `_AuthRefreshNotifier`)
+  so the redirect re-runs as soon as the flag flips.
 
 ## Unique Features (vs BrainPal)
 
@@ -305,6 +342,13 @@ usagePermissionProvider            // FutureProvider<bool>
 currentUserProvider                // provider for current user
 routerProvider                     // GoRouter
 
+// Onboarding / Referral
+postLoginInviteControllerProvider  // PostLoginInviteController (ChangeNotifier)
+                                   // — gates the /welcome-invite redirect
+referralServiceProvider            // ReferralService (deep links + share + redeem)
+referralRepositoryProvider         // ReferralRepository
+myReferralLinkProvider             // FutureProvider<String> — current user's link
+
 // Core
 supabaseClientProvider             // Provider<SupabaseClient>
 analyticsProvider                  // PostHog
@@ -322,7 +366,7 @@ analyticsProvider                  // PostHog
 ```bash
 flutter pub get
 flutter analyze            # must be 0 issues
-flutter test               # 21 tests (brain score + user avatar)
+flutter test               # 33 tests (brain score + mascot + user avatar + referral links)
 flutter run                # debug on device
 
 # Faster iterate on native detector changes (flutter run loses USB debug on
@@ -401,6 +445,30 @@ Chronological record of fixes made while tuning count accuracy against BrainPal:
    the challenge window were counted (a user could "complete" a 7-day challenge
    with good days weeks later; `score` accumulated unbounded). Fixed by adding
    `.lt('date', toStr)` so the query covers exactly `[start, endLimit)`.
+8. **Invite link in onboarding was malformed and unattributed.** Two issues:
+   (a) `.env.example` shipped `REFERRAL_BASE_URL=https://scroll-iq.vercel.app/`
+   with a trailing slash, so `ReferralRepository.buildLink` produced
+   `https://scroll-iq.vercel.app//invite?ref=CODE` (double slash) for
+   signed-in users. (b) During onboarding the user had no `referral_code`
+   yet (it's minted by the `handle_new_user` trigger at sign-up), so
+   `shareInvite()` fell into its catch branch and shared the bare base URL —
+   a homepage link with no `?ref=`, killing referral attribution. Fixed by
+   stripping trailing slashes in `Env.referralBaseUrl`, switching the
+   not-signed-in fallback to `${baseUrl}/invite`, and adding
+   `test/referral_link_test.dart` to lock in the behavior.
+9. **Restructured onboarding to make the invite actually work.** Moved
+   `ChallengeFriendsScreen` out of the pre-login `OnboardingScreen` (Story →
+   Permissions → Demo only) and into a new post-login `PostLoginInviteScreen`
+   gated behind route `/welcome-invite`. New `PostLoginInviteController`
+   (`features/onboarding/providers.dart`) is a `ChangeNotifier` merged into
+   the GoRouter `refreshListenable` alongside `_AuthRefreshNotifier`; the
+   `redirect` callback now forces freshly authenticated first-time users
+   through `/welcome-invite` before `/home`. Existing users (who have
+   `prefOnboardingDone=true` but no invite flag) are auto-migrated to
+   "already shown" so they don't see an unexpected screen on update. With
+   the screen running post-auth, `shareInvite()` always hits the success
+   branch and builds a proper `${baseUrl}/invite?ref=<CODE>` link — the
+   viral loop now works end-to-end.
 
 ### Detector status snapshot
 

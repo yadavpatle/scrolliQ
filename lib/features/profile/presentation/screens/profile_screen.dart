@@ -152,9 +152,9 @@ class ProfileScreen extends ConsumerWidget {
                           const Divider(height: 1, indent: 56),
                           _MenuTile(
                             icon: Icons.shield_outlined,
-                            label: 'Usage access',
+                            label: 'Permissions',
                             trailing: Text(
-                              granted ? 'Granted' : 'Not granted',
+                              granted ? 'Granted' : 'Review',
                               style: TextStyle(
                                 color: granted
                                     ? AppColors.success
@@ -163,15 +163,25 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                             ),
                             onTap: () async {
-                              await ref
-                                  .read(usageTrackingServiceProvider)
-                                  .requestPermission();
+                              await context.push('/permissions');
                               ref.invalidate(usagePermissionProvider);
                             },
                           ),
                         ],
                       ),
-                      orElse: () => const SizedBox.shrink(),
+                      orElse: () => Column(
+                        children: [
+                          const Divider(height: 1, indent: 56),
+                          _MenuTile(
+                            icon: Icons.shield_outlined,
+                            label: 'Permissions',
+                            onTap: () async {
+                              await context.push('/permissions');
+                              ref.invalidate(usagePermissionProvider);
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

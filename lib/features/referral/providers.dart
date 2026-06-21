@@ -20,3 +20,9 @@ final referralServiceProvider = Provider<ReferralService>((ref) {
 final myReferralLinkProvider = FutureProvider<String>((ref) {
   return ref.watch(referralRepositoryProvider).myReferralLink();
 });
+
+/// The current user's referral code (just the code, e.g. `9C04DEA0`).
+/// Useful for UIs that copy the bare code rather than the full invite URL.
+final myReferralCodeProvider = FutureProvider<String>((ref) {
+  return ref.watch(referralRepositoryProvider).myReferralCode();
+});

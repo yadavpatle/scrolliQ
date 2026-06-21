@@ -17,7 +17,13 @@ class Env {
 
   /// Base URL used to build shareable referral/invite links, e.g.
   /// `https://scrolliq.app` → `https://scrolliq.app/invite?ref=ABCD1234`.
-  static String get referralBaseUrl   => dotenv.maybeGet('REFERRAL_BASE_URL') ?? 'https://scrolliq.app';
+  ///
+  /// Trailing slashes are stripped so callers can safely append `/invite...`
+  /// without producing a malformed URL with a double slash.
+  static String get referralBaseUrl {
+    final raw = dotenv.maybeGet('REFERRAL_BASE_URL') ?? 'https://scrolliq.app';
+    return raw.replaceFirst(RegExp(r'/+$'), '');
+  }
 
   static String _required(String key) {
     final value = dotenv.maybeGet(key);
