@@ -6,13 +6,14 @@ class AppConstants {
   static const String tagline = 'Reclaim your attention.';
 
   // Tracked Android package names (extendable).
-  // Currently limited to Instagram, YouTube and Facebook. TikTok / Snapchat /
-  // X are paused for now and can be re-added here when support returns.
+  // Currently: Instagram, YouTube, Facebook, Snapchat. TikTok is paused until
+  // verified on-device and can be re-added here.
   static const Map<String, String> trackedApps = {
     'com.instagram.android': 'Instagram',
     'com.google.android.youtube': 'YouTube',
     'com.facebook.katana': 'Facebook',
     'com.facebook.lite': 'Facebook',
+    'com.snapchat.android': 'Snapchat',
   };
 
   // Default penalty thresholds (minutes / hours).

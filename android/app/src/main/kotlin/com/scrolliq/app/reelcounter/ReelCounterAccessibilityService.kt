@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.scrolliq.app.reelcounter.detectors.FacebookReelsDetector
 import com.scrolliq.app.reelcounter.detectors.InstagramReelDetector
+import com.scrolliq.app.reelcounter.detectors.SnapchatSpotlightDetector
 import com.scrolliq.app.reelcounter.detectors.YouTubeShortsDetector
 
 /**
@@ -20,15 +21,14 @@ import com.scrolliq.app.reelcounter.detectors.YouTubeShortsDetector
  */
 class ReelCounterAccessibilityService : AccessibilityService() {
 
-    // Only the currently supported platforms are registered. TikTok/Snapchat
-    // detectors remain in the codebase but are intentionally unregistered for
-    // now — re-add their entries here (and the matching enum values + manifest
-    // packageNames) to bring those platforms back.
+    // TikTok detector exists in the codebase but is intentionally unregistered
+    // until verified on-device per the Debugging Playbook in CLAUDE.md.
     private val detectors: Map<String, ReelDetector> = mapOf(
-        "com.instagram.android"     to InstagramReelDetector(),
+        "com.instagram.android"      to InstagramReelDetector(),
         "com.google.android.youtube" to YouTubeShortsDetector(),
-        "com.facebook.katana"       to FacebookReelsDetector("com.facebook.katana"),
-        "com.facebook.lite"         to FacebookReelsDetector("com.facebook.lite"),
+        "com.facebook.katana"        to FacebookReelsDetector("com.facebook.katana"),
+        "com.facebook.lite"          to FacebookReelsDetector("com.facebook.lite"),
+        "com.snapchat.android"       to SnapchatSpotlightDetector(),
     )
 
     private val lastCountAtPerPkg: HashMap<String, Long> = HashMap()
@@ -46,7 +46,11 @@ class ReelCounterAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         ReelCounterStore.init(applicationContext)
         reelTaxManager = ReelTaxManager(applicationContext).also { it.init() }
-        Log.i(TAG, "ReelCounter accessibility service connected")
+        Log.i(
+            TAG,
+            "ReelCounter accessibility service connected " +
+                "[detectors: ${detectors.keys.joinToString(",")}]",
+        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

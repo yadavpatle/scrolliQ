@@ -158,13 +158,13 @@ reference for the visual language:
 | `ReelTaxManager.kt` | Full-screen blocking overlay every N reels (configurable), 5-sec countdown |
 | `detectors/YouTubeShortsDetector.kt` | YT Shorts: **content-description fingerprint** (channel handle) + engagement gate + ad skip + 600ms cooldown. **Verified on-device.** |
 | `detectors/FacebookReelsDetector.kt` | FB Reels: **content-description fingerprint** (creator handle) + engagement gate + ad skip + 600ms cooldown (katana + lite). FB strips all resource IDs, so ID matching does not work. **Verified on-device.** |
-| `detectors/InstagramReelDetector.kt` | IG Reels: legacy resource-ID approach (clips_viewer / reels_viewer). **Not yet verified — likely over-counts + counts ads.** |
-| `detectors/TikTokReelDetector.kt` | TikTok: legacy resource-ID approach (feed_recycler_view / video_pager, both musically + trill packages). **Not yet verified.** |
-| `detectors/SnapchatSpotlightDetector.kt` | Snap Spotlight: legacy resource-ID approach (spotlight / ngs_spotlight_recycler_view). **Not yet verified.** |
+| `detectors/InstagramReelDetector.kt` | IG Reels: **content-description fingerprint** (creator handle / audio attribution) + engagement gate + ad skip + 600ms cooldown. **Migrated; not yet verified on device.** |
+| `detectors/TikTokReelDetector.kt` | TikTok: **content-description fingerprint** (creator handle / sound) + engagement gate + ad skip + 600ms cooldown. **Migrated; not yet verified on device. Currently UNREGISTERED in the service.** |
+| `detectors/SnapchatSpotlightDetector.kt` | Snap Spotlight: **content + resource-id fingerprint**. Snap exposes almost no content-descs (no creator handle / engagement rail), so this detector is shaped differently: surface gate on the `ngs_spotlight` bottom-nav id, **realness gate on the `opera` content-viewer** (present on Spotlight playback, absent on Camera — this is what stops the Camera tab from counting), fingerprint = longest human-readable visible text (caption / "user · sound" / "Contains: …") filtered against UI labels, numeric counters, internal namespace strings, and identifier-shaped tokens, + 700ms cooldown. **Verified on-device (Realme RMX1921, Android 11).** |
 
 ### Detection Heuristic — two approaches
 
-**1. Content-description fingerprint (current best — YouTube, Facebook).**
+**1. Content-description fingerprint (current best — all five detectors).**
 Modern apps either strip resource IDs (Facebook → `(name removed)`) or fire
 `CONTENT_CHANGE_TYPE_SUBTREE` repeatedly during playback (YouTube), so the
 legacy ID approach either counts nothing or massively over-counts. The robust
@@ -184,12 +184,12 @@ approach instead does a single bounded DFS over the node tree per event and:
 - **600ms cooldown**: absorbs transient fingerprint flips while fields load in
   during the swipe transition (prevents double-counting one swipe).
 
-**2. Legacy resource-ID approach (Instagram, TikTok, Snapchat — unverified).**
+**2. Legacy resource-ID approach (deprecated — kept here for historical context only).**
 Tracks in-feed via `anyIdContains(pagerIds)`; counts on subtree-change of a
 pager source OR a vertical scroll advance. Known failure modes: zero-count if
 the app strips IDs, over-count + counts ads if IDs match (no fingerprint /
-cooldown / ad gate). These should be migrated to approach #1 with an on-device
-UI dump per app.
+cooldown / ad gate). All five detectors have been migrated off this approach.
+Do not introduce new detectors that use it.
 
 ### Permissions Required
 
@@ -472,20 +472,42 @@ Chronological record of fixes made while tuning count accuracy against BrainPal:
 
 ### Detector status snapshot
 
-| App | Approach | Verified on device |
-|-----|----------|--------------------|
-| YouTube Shorts | content-desc fingerprint | ✅ yes |
-| Facebook Reels | content-desc fingerprint | ✅ yes |
-| Instagram Reels | legacy resource-id | ❌ not yet (likely over-counts + ads) |
-| TikTok | legacy resource-id | ❌ not yet |
-| Snapchat Spotlight | legacy resource-id | ❌ not yet |
+| App | Approach | Migrated | Verified on device | Registered in service |
+|-----|----------|----------|--------------------|-----------------------|
+| YouTube Shorts | content-desc fingerprint | ✅ | ✅ | ✅ |
+| Facebook Reels | content-desc fingerprint | ✅ | ✅ | ✅ (katana + lite) |
+| Instagram Reels | content-desc fingerprint | ✅ | ❌ not yet | ✅ |
+| TikTok | content-desc fingerprint | ✅ | ❌ not yet | ❌ unregistered |
+| Snapchat Spotlight | content + resource-id fingerprint | ✅ | ✅ | ✅ |
 
-> **Next:** migrate Instagram, TikTok, Snapchat to the content-desc fingerprint
-> pattern using the Debugging Playbook above (need one UI dump per app).
+> **Next:** verify the two migrated-but-unverified detectors on a device
+> using the Debugging Playbook above. After verification:
+>
+> 1. **Instagram** — already registered; no service changes needed, just
+>    confirm counts match BrainPal on a side-by-side scroll.
+> 2. **TikTok** — re-enable by adding entries to the `detectors` map in
+>    `ReelCounterAccessibilityService.kt` *and* to `trackedApps` in
+>    `lib/core/constants/app_constants.dart`. The accessibility service config
+>    XML doesn't whitelist packages so no manifest change is needed.
+>
+> Tighten the per-app `creatorSignals` / `soundSignals` / `engagementSignals`
+> / `adSignals` / `surfaceMarkers` lists in each detector based on what the
+> on-device UI dump actually emits — the values committed are best-effort
+> ports of the proven pattern, not field-confirmed.
+>
+> **Snapchat lesson (applies to any future detector):** always confirm signal
+> strings against the *live* `getRootInActiveWindow()` tree, not just the
+> static `uiautomator dump`. Snap's `opera_viewer` / `spotlight_container`
+> resource-ids appear in the dump but are **absent** from the live tree; only
+> the `ngs_spotlight` bottom-nav id and `opera*` content-descs survive. Snap
+> also exposes no creator/engagement content-descs at all, so the standard
+> engagement-gate pattern doesn't apply there.
 
 ## Roadmap (Not Yet Implemented)
 
 - iOS Screen Time API implementation
+- Bring TikTok reel counting online (detector migrated to the content-desc
+  fingerprint pattern, currently unregistered pending on-device verification)
 - Detailed Accessibility Service → view content hashing for exact reel identification
 - Custom friend challenges (not just default 7-day detox)
 - Streak & weekly digest via Supabase Edge Functions + Cron

@@ -41,6 +41,7 @@ lib/
 │   ├── auth/                   # email + Google sign-in, profile
 │   ├── onboarding/             # story slides, permissions, demo + post-login invite
 │   ├── usage_tracking/         # Android UsageStatsManager, abstraction
+│   ├── reel_counter/           # AccessibilityService reel/short counting + HUD overlay
 │   ├── dashboard/              # Brain Score Engine + UI
 │   ├── leaderboard/            # global daily leaderboard
 │   ├── friends/                # search, requests, accept/decline
@@ -284,10 +285,41 @@ The default test suite includes `test/brain_score_calculator_test.dart`, which c
 
 ---
 
+## Reel counting & supported apps
+
+ScrollIQ counts individual reels/shorts using a native Android
+`AccessibilityService` (`com.scrolliq/reel_counter`). Each supported app has a
+dedicated detector that fingerprints the visible reel from the accessibility
+tree and counts once per new reel, skipping ads. See `CLAUDE.md` for the full
+detector architecture and the on-device debugging playbook.
+
+| App | Detection approach | Status |
+|-----|--------------------|--------|
+| YouTube Shorts | content-desc fingerprint (channel handle) + engagement gate | ✅ live, verified |
+| Facebook Reels (katana + lite) | content-desc fingerprint (creator handle) + engagement gate | ✅ live, verified |
+| Instagram Reels | content-desc fingerprint (creator / audio) + engagement gate | ✅ live (verify on-device) |
+| Snapchat Spotlight | content + resource-id fingerprint (`opera` content-viewer gate) | ✅ live, verified |
+| TikTok | content-desc fingerprint (creator / sound) | ⏸ migrated, unregistered pending on-device verification |
+
+The set of tracked package names lives in
+`lib/core/constants/app_constants.dart` (`trackedApps`) and the registered
+detectors live in `ReelCounterAccessibilityService.kt`. To bring TikTok online,
+verify it on a device with the playbook in `CLAUDE.md`, then add it to both.
+
+> **Snapchat note:** Snap exposes almost no creator/engagement
+> content-descriptions, and its `opera_viewer` / `spotlight_container`
+> resource-ids appear only in a static `uiautomator dump`, not the live
+> accessibility tree. The Snap detector therefore gates counting on the
+> `opera` content-viewer (present on Spotlight playback, absent on the Camera
+> tab) and fingerprints the caption / sound text. Always confirm signals
+> against the live tree, not just a dump.
+
+---
+
 ## Roadmap
 
 - iOS implementation of `UsageTrackingService` (Screen Time API + Family Controls extension).
-- Detailed reels/shorts detection via Accessibility Service (opt-in).
+- Bring **TikTok** reel counting online (detector migrated, pending on-device verification).
 - Custom challenges with friends.
 - Streak & weekly digest notifications via Supabase Edge Functions / Cron + FCM HTTP v1.
 - In-app purchases for premium analytics.

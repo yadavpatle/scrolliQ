@@ -14,7 +14,8 @@
   the app.
 
   Tracked apps (content inspected): com.instagram.android,
-  com.google.android.youtube, com.facebook.katana, com.facebook.lite.
+  com.google.android.youtube, com.facebook.katana, com.facebook.lite,
+  com.snapchat.android.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeViewScrolled|typeWindowStateChanged|typeWindowContentChanged"
