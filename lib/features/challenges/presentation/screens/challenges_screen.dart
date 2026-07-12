@@ -35,7 +35,9 @@ class ChallengesScreen extends ConsumerWidget {
               AppShimmer(height: 120),
             ],
           ),
-          error: (e, _) => AppError(message: e.toString()),
+          error: (e, _) => AppError.friendly(e, onRetry: () {
+            ref.invalidate(challengesProvider);
+          }),
           data: (list) {
             if (list.isEmpty) {
               return const Center(

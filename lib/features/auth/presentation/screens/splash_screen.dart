@@ -53,7 +53,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     final session = Supabase.instance.client.auth.currentSession;
     if (!mounted) return;
-    context.go(session == null ? '/login' : '/home');
+
+    if (session == null) {
+      context.go('/login');
+      return;
+    }
+
+    // Validate the cached session is still usable. After a long gap the
+    // refresh token may have expired server-side, which causes every
+    // subsequent Supabase call to throw AuthRetryableFetchException.
+    try {
+      await Supabase.instance.client.auth.refreshSession();
+    } catch (e) {
+      debugPrint('Session refresh failed – signing out stale session: $e');
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (_) {
+        // Best-effort sign-out; local state is cleared regardless.
+      }
+      if (!mounted) return;
+      context.go('/login');
+      return;
+    }
+
+    if (!mounted) return;
+    context.go('/home');
   }
 
   @override

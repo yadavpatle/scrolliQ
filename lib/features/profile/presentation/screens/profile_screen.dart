@@ -40,7 +40,9 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               user.when(
                 loading: () => const AppShimmer(height: 120),
-                error: (e, _) => AppError(message: e.toString()),
+                error: (e, _) => AppError.friendly(e, onRetry: () {
+                  ref.invalidate(currentUserProvider);
+                }),
                 data: (u) {
                   if (u == null) return const SizedBox.shrink();
                   return AppCard(
@@ -100,7 +102,9 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               stats.when(
                 loading: () => const AppShimmer(height: 130),
-                error:   (e, _) => AppError(message: e.toString()),
+                error:   (e, _) => AppError.friendly(e, onRetry: () {
+                  ref.invalidate(myStatsProvider);
+                }),
                 data: (s) {
                   if (s == null) return const SizedBox.shrink();
                   return Row(

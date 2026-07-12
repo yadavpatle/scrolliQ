@@ -67,7 +67,9 @@ class _FriendsTab extends ConsumerWidget {
     final list = ref.watch(friendsListProvider);
     return list.when(
       loading: () => _shimmerList(),
-      error:   (e, _) => AppError(message: e.toString()),
+      error:   (e, _) => AppError.friendly(e, onRetry: () {
+        ref.invalidate(friendsListProvider);
+      }),
       data: (items) {
         if (items.isEmpty) {
           return RefreshIndicator(
@@ -169,7 +171,9 @@ class _RequestsTab extends ConsumerWidget {
           const SizedBox(height: 8),
           incoming.when(
             loading: () => const AppShimmer(height: 80),
-            error:   (e, _) => AppError(message: e.toString()),
+            error:   (e, _) => AppError.friendly(e, onRetry: () {
+              ref.invalidate(incomingRequestsProvider);
+            }),
             data: (items) => items.isEmpty
                 ? const _Empty(message: 'No pending requests.')
                 : Column(
@@ -215,7 +219,9 @@ class _RequestsTab extends ConsumerWidget {
           const SizedBox(height: 8),
           outgoing.when(
             loading: () => const AppShimmer(height: 80),
-            error:   (e, _) => AppError(message: e.toString()),
+            error:   (e, _) => AppError.friendly(e, onRetry: () {
+              ref.invalidate(outgoingRequestsProvider);
+            }),
             data: (items) => items.isEmpty
                 ? const _Empty(message: 'No outgoing requests.')
                 : Column(
@@ -298,7 +304,9 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
               ),
             ],
             error: (e, _) => [
-              SliverToBoxAdapter(child: AppError(message: e.toString())),
+              SliverToBoxAdapter(child: AppError.friendly(e, onRetry: () {
+                ref.invalidate(userSearchProvider(_query));
+              })),
             ],
             data: (items) {
               if (items.isEmpty) {

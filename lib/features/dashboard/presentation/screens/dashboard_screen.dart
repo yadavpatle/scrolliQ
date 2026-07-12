@@ -113,7 +113,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               if (!(accessOn.valueOrNull ?? false)) const SizedBox(height: 16),
               usage.when(
                 loading:  () => const AppShimmer(height: 220),
-                error:    (e, _) => AppError(message: e.toString()),
+                error:    (e, _) => AppError.friendly(e, onRetry: () {
+                  ref.invalidate(todayUsageProvider);
+                }),
                 data:     (u) => BrainScoreCard(usage: u),
               ),
               const SizedBox(height: 16),
@@ -152,7 +154,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               const SizedBox(height: 12),
               preview.when(
                 loading: () => const AppShimmer(height: 180),
-                error:   (e, _) => AppError(message: e.toString()),
+                error:   (e, _) => AppError.friendly(e, onRetry: () {
+                  ref.invalidate(leaderboardPreviewProvider);
+                }),
                 data:    (entries) => _PreviewList(entries: entries),
               ),
             ],

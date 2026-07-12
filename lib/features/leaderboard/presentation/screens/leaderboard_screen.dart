@@ -38,7 +38,9 @@ class LeaderboardScreen extends ConsumerWidget {
               itemBuilder: (_, __) => const AppShimmer(height: 64),
               separatorBuilder: (_, __) => const SizedBox(height: 10),
             ),
-            error: (e, _) => AppError(message: e.toString()),
+            error: (e, _) => AppError.friendly(e, onRetry: () {
+              ref.invalidate(leaderboardProvider);
+            }),
             data: (list) {
               if (list.isEmpty) {
                 return ListView(

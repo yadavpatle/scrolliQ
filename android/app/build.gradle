@@ -42,7 +42,7 @@ android {
         // requires API 23+, and Flutter 3.27+ ships with API 24 as its
         // supported minimum, so 24 strikes the broadest realistic balance.
         minSdkVersion 24
-        targetSdk 34
+        targetSdk 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
 
