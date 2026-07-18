@@ -102,58 +102,67 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen>
           : null,
       body: SafeArea(
         top: !standalone,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: standalone ? 8 : 32),
-              if (standalone) ...[
-                const Text(
-                  'Manage app permissions',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    height: 1.3,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: standalone ? 8 : 32),
+                      if (standalone) ...[
+                        const Text(
+                          'Manage app permissions',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Toggle these any time. ScrollIQ needs them to count reels and track screen time.',
+                          style: TextStyle(
+                            color: AppColors.textSecondaryDark,
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                      ] else
+                        const Text(
+                          'Enable permissions to\nstart counting reels',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            height: 1.3,
+                          ),
+                        ),
+                      const SizedBox(height: 32),
+                      ...kPermissions.map((p) => _PermRow(
+                            item: p,
+                            granted: _granted[p.key] ?? false,
+                            onAllow: () => _request(p.key),
+                          )),
+                      const Spacer(),
+                      _WhyBanner(),
+                      const SizedBox(height: 16),
+                      if (!standalone)
+                        PrimaryButton(
+                          label: 'Continue',
+                          onPressed: widget.onComplete!,
+                        ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Toggle these any time. ScrollIQ needs them to count reels and track screen time.',
-                  style: TextStyle(
-                    color: AppColors.textSecondaryDark,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-              ] else
-                const Text(
-                  'Enable permissions to\nstart counting reels',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    height: 1.3,
-                  ),
-                ),
-              const SizedBox(height: 32),
-              ...kPermissions.map((p) => _PermRow(
-                    item: p,
-                    granted: _granted[p.key] ?? false,
-                    onAllow: () => _request(p.key),
-                  )),
-              const Spacer(),
-              _WhyBanner(),
-              const SizedBox(height: 16),
-              if (!standalone)
-                PrimaryButton(
-                  label: 'Continue',
-                  onPressed: widget.onComplete!,
-                ),
-              const SizedBox(height: 24),
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -212,27 +221,75 @@ class _PermRow extends StatelessWidget {
   }
 }
 
-class _WhyBanner extends StatelessWidget {
+class _WhyBanner extends StatefulWidget {
+  @override
+  State<_WhyBanner> createState() => _WhyBannerState();
+}
+
+class _WhyBannerState extends State<_WhyBanner> {
+  bool _expanded = false;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceDark2,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.verified, color: AppColors.primary, size: 20),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Why should I give this permission?',
-              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+    return GestureDetector(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDark2,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.verified, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Why should I give this permission?',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _expanded ? 0.25 : 0,
+                  duration: const Duration(milliseconds: 250),
+                  child: const Icon(Icons.chevron_right,
+                      color: AppColors.textSecondaryDark, size: 20),
+                ),
+              ],
             ),
-          ),
-          Icon(Icons.chevron_right, color: AppColors.textSecondaryDark, size: 20),
-        ],
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: const Padding(
+                padding: EdgeInsets.only(top: 10),
+                child: Text(
+                  'ScrollIQ uses Accessibility and Overlay permissions to '
+                  'count your reels in real-time, Usage Access to track '
+                  'screen time, and Battery Optimization exemption to keep '
+                  'counting reliably in the background. Your data stays on '
+                  'your device. These permissions are never used to read '
+                  'personal content.',
+                  style: TextStyle(
+                    color: AppColors.textSecondaryDark,
+                    fontSize: 12.5,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              crossFadeState: _expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 250),
+            ),
+          ],
+        ),
       ),
     );
   }

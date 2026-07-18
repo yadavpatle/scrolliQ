@@ -451,3 +451,66 @@ Widget _shimmerList() => ListView.separated(
       itemBuilder: (_, __) => const AppShimmer(height: 64),
       separatorBuilder: (_, __) => const SizedBox(height: 10),
     );
+
+// ---------------------------------------------------------------------------
+// Embeddable content — used inside the Goals hub's "Friends" tab.
+// ---------------------------------------------------------------------------
+
+/// Scaffold-free friends content that can be embedded inside another
+/// TabBarView (e.g. the Goals hub). Renders the Friends / Requests / Find
+/// sub-sections as a scrollable column with expandable sections.
+class FriendsContent extends ConsumerWidget {
+  const FriendsContent({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DefaultTabController(
+      length: 3,
+      child: Column(
+        children: [
+          // Invite button row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () =>
+                      ref.read(referralServiceProvider).shareInvite(),
+                  icon: const Icon(Icons.ios_share, size: 18),
+                  label: const Text('Invite'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Sub-tabs
+          const TabBar(
+            tabs: [
+              Tab(text: 'Friends'),
+              Tab(text: 'Requests'),
+              Tab(text: 'Find'),
+            ],
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondaryDark,
+          ),
+          const Expanded(
+            child: TabBarView(
+              children: [
+                _FriendsTab(),
+                _RequestsTab(),
+                _SearchTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

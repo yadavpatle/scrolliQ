@@ -138,12 +138,6 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     _MenuTile(
-                      icon: Icons.people_outline_rounded,
-                      label: 'Friends',
-                      onTap: () => context.push('/friends'),
-                    ),
-                    const Divider(height: 1, indent: 56),
-                    _MenuTile(
                       icon: Icons.notifications_none_rounded,
                       label: 'Notifications',
                       trailing: const Text('Enabled',
@@ -281,20 +275,23 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10),
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
         ),
-        child: Icon(icon, color: AppColors.primary, size: 18),
-      ),
       title: Text(label),
       trailing: trailing ??
           const Icon(Icons.chevron_right_rounded,
               color: AppColors.textTertiaryDark),
       onTap: onTap,
+      ),
     );
   }
 }

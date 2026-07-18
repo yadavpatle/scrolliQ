@@ -8,65 +8,105 @@ import '../../../../shared/widgets/app_error.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../domain/entities/challenge.dart';
 import '../../providers.dart';
+import '../../../friends/presentation/screens/friends_screen.dart';
+import '../../../groups/presentation/screens/groups_list_screen.dart';
 
 class ChallengesScreen extends ConsumerWidget {
   const ChallengesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final challenges = ref.watch(challengesProvider);
-    final progress   = ref.watch(myChallengeProgressProvider);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Challenges')),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: () async {
-          ref.invalidate(challengesProvider);
-          ref.invalidate(myChallengeProgressProvider);
-          await ref.read(challengesProvider.future);
-        },
-        child: challenges.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(20),
-            children: const [
-              AppShimmer(height: 200),
-              SizedBox(height: 12),
-              AppShimmer(height: 120),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Goals'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Challenges'),
+              Tab(text: 'Friends'),
+              Tab(text: 'Groups'),
             ],
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondaryDark,
           ),
-          error: (e, _) => AppError.friendly(e, onRetry: () {
-            ref.invalidate(challengesProvider);
-          }),
-          data: (list) {
-            if (list.isEmpty) {
-              return const Center(
-                child: Text('No challenges yet.',
-                    style: TextStyle(color: AppColors.textSecondaryDark)),
-              );
-            }
-            final progressMap = {
-              for (final p in progress.valueOrNull ?? <ChallengeProgress>[])
-                p.challengeId: p,
-            };
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, i) {
-                final c = list[i];
-                return _ChallengeCard(
-                  challenge: c,
-                  progress: progressMap[c.id],
-                );
-              },
-            );
-          },
+        ),
+        body: const TabBarView(
+          children: [
+            _ChallengesTab(),
+            FriendsContent(),
+            GroupsListScreen(),
+          ],
         ),
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Challenges Tab — extracted from the original ChallengesScreen
+// ---------------------------------------------------------------------------
+
+class _ChallengesTab extends ConsumerWidget {
+  const _ChallengesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final challenges = ref.watch(challengesProvider);
+    final progress = ref.watch(myChallengeProgressProvider);
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () async {
+        ref.invalidate(challengesProvider);
+        ref.invalidate(myChallengeProgressProvider);
+        await ref.read(challengesProvider.future);
+      },
+      child: challenges.when(
+        loading: () => ListView(
+          padding: const EdgeInsets.all(20),
+          children: const [
+            AppShimmer(height: 200),
+            SizedBox(height: 12),
+            AppShimmer(height: 120),
+          ],
+        ),
+        error: (e, _) => AppError.friendly(e, onRetry: () {
+          ref.invalidate(challengesProvider);
+        }),
+        data: (list) {
+          if (list.isEmpty) {
+            return const Center(
+              child: Text('No challenges yet.',
+                  style: TextStyle(color: AppColors.textSecondaryDark)),
+            );
+          }
+          final progressMap = {
+            for (final p in progress.valueOrNull ?? <ChallengeProgress>[])
+              p.challengeId: p,
+          };
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            itemCount: list.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (_, i) {
+              final c = list[i];
+              return _ChallengeCard(
+                challenge: c,
+                progress: progressMap[c.id],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Challenge Card — preserved from the original
+// ---------------------------------------------------------------------------
 
 class _ChallengeCard extends ConsumerWidget {
   const _ChallengeCard({required this.challenge, this.progress});

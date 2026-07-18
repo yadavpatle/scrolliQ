@@ -23,12 +23,6 @@ class MainShell extends StatelessWidget {
 
   int _currentIndex(BuildContext context) {
     final loc = GoRouterState.of(context).matchedLocation;
-    // /friends is a shell route that's reached via push from /profile —
-    // keep Profile highlighted while the user is browsing friends.
-    if (loc.startsWith('/friends')) {
-      final profileIdx = _tabs.indexWhere((t) => t.path == '/profile');
-      if (profileIdx >= 0) return profileIdx;
-    }
     final i = _tabs.indexWhere((t) => loc.startsWith(t.path));
     return i < 0 ? 0 : i;
   }
