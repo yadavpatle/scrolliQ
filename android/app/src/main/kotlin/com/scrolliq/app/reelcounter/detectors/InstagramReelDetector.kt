@@ -3,10 +3,10 @@ package com.scrolliq.app.reelcounter.detectors
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.scrolliq.app.reelcounter.ReelDetector
-import com.scrolliq.app.reelcounter.ReelNodeUtil
 
 /**
- * Instagram Reels detector — accuracy-first, mirrors [YouTubeShortsDetector].
+ * Instagram Reels detector — accuracy-first, mirrors [YouTubeShortsDetector] /
+ * [FacebookReelsDetector].
  *
  * Why the rewrite: the previous implementation counted on every
  * TYPE_VIEW_SCROLLED with a vertical delta and on every SUBTREE
@@ -15,19 +15,28 @@ import com.scrolliq.app.reelcounter.ReelNodeUtil
  * counted as 3–8 reels (over-counting). It also had no ad filtering, so
  * sponsored reels inflated the total.
  *
- * New approach (matches YouTubeShortsDetector):
- *   1. Use pager-id presence to maintain `inReelFeed` (cheap, robust).
- *      Instagram still ships these resource ids on the clips host so the
- *      gate is reliable, just not the per-reel signal.
- *   2. Fingerprint the visible reel from accessibility content-descriptions.
- *      Instagram exposes several stable per-reel signals — audio attribution
- *      ("Original audio by @x") and creator handle ("@x's profile picture",
- *      "Follow @x"). The first one we encounter becomes the fingerprint.
- *   3. Require an engagement marker (like / comment / save / send post) to
- *      prove the page is a real reel, not an ad / loading frame / story.
- *   4. Filter explicit ad markers ("Sponsored", "Paid partnership").
- *   5. +1 only when the fingerprint changes, with a cooldown to absorb the
- *      transition flicker while fields load in mid-swipe.
+ * ### Old vs new devices
+ * The prior fingerprint rewrite still gated feed-presence *solely* on the
+ * `clips_viewer*` resource-ids. That is the exact fragility that produced
+ * **zero counts** for Facebook (see CLAUDE.md work-log #6): Instagram builds
+ * differ widely across app/OS versions — some rename these ids, some strip
+ * every `view-id-resource-name` to `(name removed)`. On any such device the
+ * id gate never fires, `inReelFeed` stays false, and nothing is ever counted.
+ *
+ * To work on both old and new devices we now use a **dual gate**: the reels
+ * surface is considered present if EITHER
+ *   • a pager resource-id is seen (fast path, modern builds that keep ids), OR
+ *   • a reels-surface content-description marker is seen (fallback for builds
+ *     that strip/rename ids — the Facebook-detector strategy).
+ * Both are collected in one bounded DFS. The fingerprint / engagement lists
+ * are also broadened to cover phrasing that varies between IG versions.
+ *
+ * Counting (unchanged, robust against over-count):
+ *   1. Must be on the reels surface (id OR content-desc marker).
+ *   2. Must NOT be an ad ("Sponsored" / "Paid partnership").
+ *   3. Must expose an engagement marker (real reel, not an ad/loading frame).
+ *   4. +1 only when the per-reel fingerprint changes, with a 600ms cooldown to
+ *      absorb the transition flicker while fields load in mid-swipe.
  */
 class InstagramReelDetector : ReelDetector {
 
@@ -41,12 +50,33 @@ class InstagramReelDetector : ReelDetector {
 
     override val isInReelFeed: Boolean get() = inReelFeed
 
-    /** Pager-host ids that indicate the Reels feed is on screen. */
+    /**
+     * Pager-host resource-ids that indicate the Reels feed is on screen. Fast,
+     * robust signal on builds that keep resource-ids. Kept broad to cover
+     * both older and newer id spellings. Matched against
+     * `view-id-resource-name` (substring, case-insensitive).
+     */
     private val pagerIds = listOf(
         "clips_viewer",
         "reels_viewer",
         "clips_video_container",
         "clips_viewer_view_pager",
+        "clips_swipe_refresh_container",
+        "reel_feed_timeline",
+        "clips_tab",
+    )
+
+    /**
+     * Content-description markers for the reels *viewing* surface — the
+     * fallback used when a build strips/renames resource-ids. Chosen to be
+     * specific to the reel player (not the bottom-nav "Reels" tab label, which
+     * is always present). These phrases have been stable across IG versions.
+     */
+    private val reelMarkers = listOf(
+        "reel by",             // "Reel by <creator>"
+        "original audio",      // "Original audio" / "Original audio by @x"
+        "double tap to like",  // reel player affordance
+        "audio page",          // "Go to audio page"
     )
 
     /**
@@ -64,27 +94,32 @@ class InstagramReelDetector : ReelDetector {
      * Per-reel fingerprint sources, in priority order. We take the FIRST
      * match (not a concatenation) so the value stays stable as other fields
      * load in. All encode the creator/audio identity, which is stable while
-     * a reel plays and changes on swipe.
+     * a reel plays and changes on swipe. Broadened to cover phrasing seen on
+     * both older and newer IG builds.
      */
     private val fingerprintSignals = listOf(
+        "reel by ",            // "Reel by <username>"  (very stable)
         "original audio by",   // "Original audio by @username"
         "'s profile picture",  // "@username's profile picture"
         "follow ",             // "Follow @username"
+        "audio by ",           // "<song> by <artist>" / "Audio by @x"
     )
 
     /**
      * Engagement markers — at least one proves the page is a real reel, not
      * an ad / loading frame. Reels always expose the like/comment/save/send
-     * action rail.
+     * action rail. Broadened for cross-version phrasing.
      */
     private val engagementSignals = listOf(
         "liked by",            // "Liked by @x and others"
         "view all comments",   // when comments exist
         "be the first to like",
         "send post",           // share button content-desc
+        "reaction",            // some builds label reactions
         "save",                // save button
         "like",                // generic, paired with fingerprint above
         "comment",             // generic, paired with fingerprint above
+        "share",               // generic, paired with fingerprint above
     )
 
     override fun consume(
@@ -92,9 +127,21 @@ class InstagramReelDetector : ReelDetector {
         root: AccessibilityNodeInfo?,
     ): Boolean {
         val nowWall = System.currentTimeMillis()
+        if (root == null) {
+            // Can't read the tree this tick; let the feed flag decay on window
+            // changes / timeout so the pill doesn't stick.
+            if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+                nowWall - lastInFeedAt > 1_200L) {
+                inReelFeed = false
+            }
+            return false
+        }
 
-        // Refresh feed-presence cheaply per event.
-        if (ReelNodeUtil.anyIdContains(root, pagerIds, maxNodes = 250)) {
+        // Single traversal collecting every signal we need (id + content-desc).
+        val scan = scanTree(root)
+
+        // Dual feed gate: resource-id OR content-desc reel-surface marker.
+        if (scan.hasPagerId || scan.hasReelMarker) {
             inReelFeed = true
             lastInFeedAt = nowWall
         } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
@@ -102,10 +149,7 @@ class InstagramReelDetector : ReelDetector {
             inReelFeed = false
         }
 
-        if (!inReelFeed || root == null) return false
-
-        // Single traversal collecting every signal we need.
-        val scan = scanTree(root)
+        if (!inReelFeed) return false
 
         // Explicit ad → never count.
         if (scan.isAd) return false
@@ -129,26 +173,40 @@ class InstagramReelDetector : ReelDetector {
     }
 
     private data class Scan(
+        val hasPagerId: Boolean,
+        val hasReelMarker: Boolean,
         val isAd: Boolean,
         val fingerprint: String,
         val hasEngagement: Boolean,
     )
 
-    /** One bounded DFS collecting ad / fingerprint / engagement signals. */
+    /**
+     * One bounded DFS collecting id / reel-marker / ad / fingerprint /
+     * engagement signals in a single pass (cheaper than separate traversals).
+     */
     private fun scanTree(root: AccessibilityNodeInfo): Scan {
+        var hasPagerId = false
+        var hasReelMarker = false
         var isAd = false
         var hasEngagement = false
         val fpFound = arrayOfNulls<String>(fingerprintSignals.size)
         var visited = 0
         val stack = ArrayDeque<AccessibilityNodeInfo>()
         stack.addLast(root)
-        while (stack.isNotEmpty() && visited < 450) {
+        while (stack.isNotEmpty() && visited < 500) {
             val node = stack.removeLast()
             visited++
+
+            if (!hasPagerId) {
+                val id = node.viewIdResourceName?.lowercase()
+                if (id != null && pagerIds.any { id.contains(it) }) hasPagerId = true
+            }
+
             val desc = node.contentDescription?.toString()?.lowercase()?.trim()
             val text = node.text?.toString()?.lowercase()?.trim()
             for (s in sequenceOf(desc, text)) {
                 if (s == null || s.isEmpty()) continue
+                if (!hasReelMarker && reelMarkers.any { s.contains(it) }) hasReelMarker = true
                 if (!isAd && adSignals.any { s.contains(it) }) isAd = true
                 if (!hasEngagement && engagementSignals.any { s.contains(it) }) {
                     hasEngagement = true
@@ -164,6 +222,8 @@ class InstagramReelDetector : ReelDetector {
             }
         }
         return Scan(
+            hasPagerId = hasPagerId,
+            hasReelMarker = hasReelMarker,
             isAd = isAd,
             fingerprint = fpFound.firstOrNull { it != null } ?: "",
             hasEngagement = hasEngagement,

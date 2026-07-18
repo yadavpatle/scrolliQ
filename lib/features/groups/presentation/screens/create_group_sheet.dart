@@ -20,9 +20,30 @@ class _CreateGroupSheetState extends ConsumerState<CreateGroupSheet> {
   bool _loading = false;
 
   static const _emojis = [
-    '🔥', '🧠', '💪', '🎯', '⚡', '🏆', '🌟', '👑',
-    '🚀', '💎', '🦾', '🎮', '📱', '🛡️', '🌊', '🍀',
-    '🐉', '🦅', '🐺', '🦁', '🐻', '🦊', '🐧', '🦋',
+    '🔥',
+    '🧠',
+    '💪',
+    '🎯',
+    '⚡',
+    '🏆',
+    '🌟',
+    '👑',
+    '🚀',
+    '💎',
+    '🦾',
+    '🎮',
+    '📱',
+    '🛡️',
+    '🌊',
+    '🍀',
+    '🐉',
+    '🦅',
+    '🐺',
+    '🦁',
+    '🐻',
+    '🦊',
+    '🐧',
+    '🦋',
   ];
 
   @override
@@ -65,118 +86,119 @@ class _CreateGroupSheetState extends ConsumerState<CreateGroupSheet> {
         20,
         20 + MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.borderDark,
-                borderRadius: BorderRadius.circular(2),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderDark,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          const Text(
-            'Create a Group',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
+            const Text(
+              'Create a Group',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Pick an emoji, name your group, and invite friends to compete.',
-            style: TextStyle(
-              color: AppColors.textSecondaryDark,
-              fontSize: 13,
-              height: 1.4,
+            const SizedBox(height: 4),
+            const Text(
+              'Pick an emoji, name your group, and invite friends to compete.',
+              style: TextStyle(
+                color: AppColors.textSecondaryDark,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Emoji picker
-          const Text(
-            'Group Icon',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-              color: AppColors.textSecondaryDark,
+            // Emoji picker
+            const Text(
+              'Group Icon',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: AppColors.textSecondaryDark,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _emojis.map((emoji) {
-              final selected = emoji == _selectedEmoji;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedEmoji = emoji),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppColors.primary.withValues(alpha: 0.18)
-                        : AppColors.surfaceDark,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                    border: Border.all(
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _emojis.map((emoji) {
+                final selected = emoji == _selectedEmoji;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedEmoji = emoji),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
                       color: selected
-                          ? AppColors.primary
-                          : AppColors.borderDark,
-                      width: selected ? 2 : 1,
+                          ? AppColors.primary.withValues(alpha: 0.18)
+                          : AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                      border: Border.all(
+                        color:
+                            selected ? AppColors.primary : AppColors.borderDark,
+                        width: selected ? 2 : 1,
+                      ),
                     ),
+                    alignment: Alignment.center,
+                    child: Text(emoji, style: const TextStyle(fontSize: 22)),
                   ),
-                  alignment: Alignment.center,
-                  child: Text(emoji, style: const TextStyle(fontSize: 22)),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
-
-          // Name
-          TextField(
-            controller: _nameController,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'Group Name',
-              hintText: 'e.g. Brain Squad',
+                );
+              }).toList(),
             ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 14),
+            const SizedBox(height: 20),
 
-          // Description
-          TextField(
-            controller: _descController,
-            textCapitalization: TextCapitalization.sentences,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Description (optional)',
-              hintText: 'What is this group about?',
+            // Name
+            TextField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Group Name',
+                hintText: 'e.g. Brain Squad',
+              ),
+              onChanged: (_) => setState(() {}),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 14),
 
-          SizedBox(
-            width: double.infinity,
-            child: PrimaryButton(
-              label: 'Create Group',
-              icon: Icons.group_add_rounded,
-              loading: _loading,
-              onPressed: _nameController.text.trim().isEmpty ? null : _create,
+            // Description
+            TextField(
+              controller: _descController,
+              textCapitalization: TextCapitalization.sentences,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                hintText: 'What is this group about?',
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: 'Create Group',
+                icon: Icons.group_add_rounded,
+                loading: _loading,
+                onPressed: _nameController.text.trim().isEmpty ? null : _create,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 package com.scrolliq.app.reelcounter.detectors
 
+import android.graphics.Rect
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.scrolliq.app.reelcounter.ReelDetector
@@ -33,9 +34,17 @@ import com.scrolliq.app.reelcounter.ReelDetector
  *                        tree (a snap is actually mounted, not a loading
  *                        frame between swipes).
  *   3. Ad gate         — drop on explicit ad strings.
- *   4. Fingerprint     — the **longest non-UI-label visible text** in the
- *                        tree. On Spotlight this is reliably the caption
- *                        (or, on captionless snaps, the creator handle).
+ *   4. Fingerprint     — the **longest on-screen non-UI-label visible text**
+ *                        in the tree. Spotlight is a vertical pager that keeps
+ *                        the adjacent (preloaded) snaps mounted in the tree,
+ *                        laid out off-screen above/below the active one. If we
+ *                        picked the longest text *anywhere* in the tree the
+ *                        fingerprint could lock onto a neighbour snap's caption
+ *                        and either not change on swipe (undercount) or flip
+ *                        independently of the visible snap (miscount). So we
+ *                        only consider text whose on-screen bounds fall inside
+ *                        the current viewport — that is reliably the active
+ *                        snap's caption (or, on captionless snaps, its handle).
  *                        It changes atomically on swipe.
  *   5. Cooldown        — 700 ms (slightly longer than the YT 600 ms because
  *                        Snap's swipe transition is slower and pickers like
@@ -202,6 +211,17 @@ class SnapchatSpotlightDetector : ReelDetector {
         var isAd = false
         var bestText = ""
         var visited = 0
+
+        // Viewport of the active window. Spotlight lays preloaded neighbour
+        // snaps out off-screen (vertically), so a candidate's on-screen bounds
+        // tell us whether its text belongs to the snap the user is actually
+        // looking at. A degenerate viewport (0-area) means we couldn't read
+        // bounds — fall back to accepting all nodes so we never regress to
+        // zero counts on devices that don't report window bounds.
+        val viewport = Rect().also { root.getBoundsInScreen(it) }
+        val haveViewport = viewport.width() > 0 && viewport.height() > 0
+
+        val nodeBounds = Rect()
         val stack = ArrayDeque<AccessibilityNodeInfo>()
         stack.addLast(root)
         while (stack.isNotEmpty() && visited < 500) {
@@ -214,6 +234,21 @@ class SnapchatSpotlightDetector : ReelDetector {
             if (id != null) {
                 if (!hasSurface && surfaceIds.any { id.contains(it) }) hasSurface = true
                 if (!hasRealSnap && realSnapIds.any { id.contains(it) }) hasRealSnap = true
+            }
+
+            // Is this node on the active (visible) page? Preloaded neighbour
+            // snaps are mounted but laid out off-screen, so their bounds sit
+            // above/below the viewport. Require the node's centre to fall
+            // inside the viewport. When bounds are unavailable, `onScreen`
+            // stays true (see `haveViewport`) so we don't lose all candidates.
+            val onScreen = if (!haveViewport) {
+                true
+            } else {
+                node.getBoundsInScreen(nodeBounds)
+                nodeBounds.width() > 0 && nodeBounds.height() > 0 &&
+                    Rect.intersects(nodeBounds, viewport) &&
+                    nodeBounds.centerY() in viewport.top..viewport.bottom &&
+                    nodeBounds.centerX() in viewport.left..viewport.right
             }
 
             // Text + content-desc both contribute to ad detection and
@@ -233,12 +268,13 @@ class SnapchatSpotlightDetector : ReelDetector {
                 // so it's our realness gate that separates Spotlight from
                 // Camera.
                 if (!hasRealSnap && lower.contains("opera")) hasRealSnap = true
-                // Fingerprint candidacy: must be substantial, not a pure
-                // number, not a known constant UI label, and not an
-                // internal Snap namespace string (e.g.
+                // Fingerprint candidacy: must be on the visible page, be
+                // substantial, not a pure number, not a known constant UI
+                // label, and not an internal Snap namespace string (e.g.
                 // "63849936178:namespace:LIVE_CAMERA_FRONT" — leaks into
                 // the tree during tab transitions and false-counts).
-                if (raw.length >= minFingerprintLen &&
+                if (onScreen &&
+                    raw.length >= minFingerprintLen &&
                     raw.length > bestText.length &&
                     lower !in constantUiLabels &&
                     !isPureCounterText(raw) &&

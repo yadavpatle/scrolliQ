@@ -60,6 +60,12 @@ class GroupsRepository {
   }
 
   /// Create a new group. The current user becomes the owner.
+  ///
+  /// Uses the `create_group` RPC (security definer) so the group row and the
+  /// owner `group_members` row are inserted atomically. This also avoids a
+  /// PostgREST edge case where the `.from('groups').insert(...)` path can be
+  /// rejected by the "Groups: insert self" RLS policy even when
+  /// `auth.uid() = created_by`.
   Future<Group> createGroup({
     required String name,
     String description = '',
@@ -68,29 +74,17 @@ class GroupsRepository {
     final me = _me;
     if (me == null) throw StateError('Not signed in');
 
-    // Generate invite code via RPC-like approach (use the DB function).
-    final codeResult =
-        await _client.rpc('gen_group_invite_code') as String;
-
-    final row = await _client
-        .from('groups')
-        .insert({
-          'name': name,
-          'description': description,
-          'avatar_emoji': avatarEmoji,
-          'created_by': me,
-          'invite_code': codeResult,
-        })
-        .select()
-        .single();
-
-    // Add creator as owner.
-    await _client.from('group_members').insert({
-      'group_id': row['id'],
-      'user_id': me,
-      'role': 'owner',
+    final result = await _client.rpc('create_group', params: {
+      'p_name': name,
+      'p_description': description,
+      'p_avatar_emoji': avatarEmoji,
     });
 
+    if (result == null) {
+      throw StateError('create_group returned null');
+    }
+
+    final row = Map<String, dynamic>.from(result as Map);
     return Group.fromMap({...row, 'member_count': 1});
   }
 
