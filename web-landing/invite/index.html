@@ -64,8 +64,8 @@
 
     <div class="stores">
       <a class="btn btn-primary" id="play"
-         href="https://play.google.com/store/apps/details?id=com.scrolliq.app">
-        Get on Google Play
+         href="/downloads/scrolliq.apk" download>
+        ⬇ Download for Android
       </a>
       <a class="btn btn-ghost" id="ios"
          href="#">
@@ -74,6 +74,7 @@
     </div>
 
     <a class="open" id="open-app" href="#">Already installed? Open ScrollIQ</a>
+    <a class="open" href="https://scroll-iq.vercel.app/#install">How to install the APK</a>
   </main>
 
 <script>
@@ -87,8 +88,10 @@
 
     // TODO: replace XXXXXXXXX with the real App Store ID once iOS ships.
     var IOS_APP_ID = 'XXXXXXXXX';
-    var PLAY_URL = 'https://play.google.com/store/apps/details?id=com.scrolliq.app'
-                 + (ref ? '&referrer=ref%3D' + refSafe : '');
+    // Direct APK download (not on Google Play yet). The ?ref is dropped here
+    // because APK installs can't carry an install-referrer — the code is
+    // stored client-side by the invite page below and redeemed after sign-in.
+    var PLAY_URL = '/downloads/scrolliq.apk';
     var IOS_URL  = 'https://apps.apple.com/app/id' + IOS_APP_ID;
     var SCHEME   = 'scrolliq://invite' + (ref ? '?ref=' + refSafe : '');
 
@@ -140,5 +143,9 @@
     });
   })();
 </script>
+
+  <!-- Vercel Web Analytics (static-site install). -->
+  <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

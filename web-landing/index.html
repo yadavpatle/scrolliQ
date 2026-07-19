@@ -56,6 +56,10 @@
     .btn:hover{transform:translateY(-1px)}
     .btn-primary{background:linear-gradient(135deg,var(--accent),#5a3dff);color:#fff}
     .btn-ghost{background:transparent;border-color:#2a2a44;color:#fff}
+    .apk-note{margin:14px 0 0;color:var(--muted);font-size:12.5px;line-height:1.6}
+    .apk-note a{color:#cdbfff;text-decoration:none;font-weight:600}
+    .apk-note a:hover{text-decoration:underline}
+    @media (max-width:760px){.apk-note{margin-left:auto;margin-right:auto}}
 
     .phone{justify-self:center;width:min(320px,80vw);aspect-ratio:9/19;
       border-radius:36px;border:1px solid #2a2a44;
@@ -79,6 +83,22 @@
     .card h3{margin:0 0 6px;font-size:17px}
     .card p{margin:0;color:var(--muted);font-size:14px}
 
+    .install{padding:24px 0 8px}
+    .install-title{font-size:clamp(24px,3.5vw,32px);margin:0 0 6px;letter-spacing:-.01em}
+    .install-sub{color:var(--muted);margin:0 0 24px;font-size:15px}
+    .steps{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+    .steps li{display:flex;gap:14px;align-items:flex-start;
+      background:var(--bg-2);border:1px solid #23234a;border-radius:16px;padding:16px 18px}
+    .steps .step-n{flex:0 0 30px;width:30px;height:30px;border-radius:50%;
+      display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
+    .steps div{font-size:14.5px;color:var(--muted)}
+    .steps strong{color:#fff;display:block;margin-bottom:2px}
+    .steps em{color:#cdbfff;font-style:normal;font-weight:600}
+    .steps code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+      background:#1a1a36;border:1px solid #2a2a4d;color:#cdbfff;padding:1px 6px;border-radius:6px}
+    .install-note{margin:18px 0 0;color:var(--muted);font-size:12.5px;line-height:1.6}
+
     footer{padding:48px 0 24px;color:var(--muted);font-size:13px;text-align:center;
       border-top:1px solid #23234a;margin-top:48px}
     footer a{color:var(--muted);margin:0 8px}
@@ -90,6 +110,7 @@
       <div class="logo"><span class="logo-dot"></span>ScrollIQ</div>
       <nav>
         <a href="#features">Features</a>
+        <a href="#install">Install</a>
         <a href="/privacy">Privacy</a>
       </nav>
     </header>
@@ -103,12 +124,16 @@
           take back your focus.
         </p>
         <div class="cta">
-          <a class="btn btn-primary"
-             href="https://play.google.com/store/apps/details?id=com.scrolliq.app">
-            Get on Google Play
+          <a class="btn btn-primary" id="download-apk"
+             href="/downloads/scrolliq.apk" download>
+            ⬇ Download for Android
           </a>
           <a class="btn btn-ghost" href="#features">Learn more</a>
         </div>
+        <p class="apk-note">
+          Direct APK · v1.0.0 · Android 8.0+ · not on Google Play yet.<br />
+          New to sideloading? <a href="#install">How to install an APK →</a>
+        </p>
       </div>
 
       <div class="phone" aria-hidden="true">
@@ -135,6 +160,50 @@
       </div>
     </section>
 
+    <section id="install" class="install">
+      <h2 class="install-title">How to install the APK</h2>
+      <p class="install-sub">
+        ScrollIQ isn’t on Google Play yet, so you install it directly. Takes about a minute.
+      </p>
+      <ol class="steps">
+        <li>
+          <span class="step-n">1</span>
+          <div>
+            <strong>Download the app.</strong>
+            Tap <em>Download for Android</em> above and wait for
+            <code>scrolliq.apk</code> to finish downloading.
+          </div>
+        </li>
+        <li>
+          <span class="step-n">2</span>
+          <div>
+            <strong>Open the file.</strong>
+            Open it from your notification shade or your <em>Files → Downloads</em> folder.
+          </div>
+        </li>
+        <li>
+          <span class="step-n">3</span>
+          <div>
+            <strong>Allow install from this source.</strong>
+            If Android warns you, tap <em>Settings</em> and turn on
+            <em>Allow from this source</em> for your browser or Files app, then go back.
+          </div>
+        </li>
+        <li>
+          <span class="step-n">4</span>
+          <div>
+            <strong>Install &amp; open.</strong>
+            Tap <em>Install</em>, then <em>Open</em>. Sign up and grant the usage
+            &amp; accessibility permissions so ScrollIQ can measure your Brain Score.
+          </div>
+        </li>
+      </ol>
+      <p class="install-note">
+        Safe to install: the APK is signed by ScrollIQ. On Android 8+ the “unknown
+        source” prompt is per-app, so you’re only trusting the app you downloaded from.
+      </p>
+    </section>
+
     <footer>
       <div>© ScrollIQ</div>
       <div style="margin-top:8px">
@@ -144,5 +213,11 @@
       </div>
     </footer>
   </div>
+
+  <!-- Vercel Web Analytics (static-site install). Enable "Web Analytics" for
+       this project in the Vercel dashboard; Vercel then serves the script
+       below automatically at deploy time. -->
+  <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

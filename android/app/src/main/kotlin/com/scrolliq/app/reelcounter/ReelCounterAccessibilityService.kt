@@ -60,14 +60,6 @@ class ReelCounterAccessibilityService : AccessibilityService() {
         val isWindowChange =
             event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
 
-        // Track the real foreground app on window transitions. Transient
-        // windows (status bar / quick-settings, the IME, our own pill) must not
-        // count as "switched apps", otherwise pulling the notification shade or
-        // tapping a comment box would wrongly hide the pill.
-        if (isWindowChange && !isTransientWindow(pkg)) {
-            foregroundPackage = pkg
-        }
-
         val detector = detectors[pkg]
         if (detector == null) {
             // A non-tracked app is involved. If it has become the foreground
@@ -75,18 +67,49 @@ class ReelCounterAccessibilityService : AccessibilityService() {
             // We deliberately do NOT inspect this app's content (no safeRoot()
             // call): we only ever read its package name. This preserves the
             // "never query content outside the tracked apps" guarantee.
+            //
+            // NOTE: we do NOT latch `foregroundPackage` here. OEM skins
+            // (ColorOS/MIUI/OneUI) fire TYPE_WINDOW_STATE_CHANGED from transient
+            // system overlays (smart sidebar, floating notifications, gesture
+            // pill…) whose package is neither systemui nor the IME. Latching
+            // onto those wrongly marked a real reel app as "backgrounded" and
+            // silently dropped its content events → intermittent under-counting
+            // ("sometimes counts, sometimes doesn't"). The authoritative
+            // foreground signal is now the active-window owner read below from
+            // the tracked app's own root, so a stray overlay event can no
+            // longer suppress counting.
             if (isWindowChange && !isTransientWindow(pkg)) {
                 ReelFeedState.set(false)
             }
             return
         }
 
-        // Ignore stray background events from a tracked app while a different
-        // app is actually on top, so the pill never floats over a non-reel app.
-        val fg = foregroundPackage
-        if (fg != null && fg != pkg) return
-
+        // Read the tracked app's active-window root ONCE. Its owner package is
+        // the authoritative "what's really on screen" signal — reliable even on
+        // OEM skins, because their transient overlays are non-focusable and so
+        // getRootInActiveWindow() still returns the underlying reel app. This
+        // only ever reads a TRACKED app's tree, preserving the privacy
+        // guarantee documented in accessibility_service_config.xml.
         val root = safeRoot()
+        val activePkg = root?.packageName?.toString()
+
+        when {
+            // Tracked app genuinely owns the active window → it is foreground.
+            activePkg == pkg -> foregroundPackage = pkg
+            // The active window belongs to a real, different app → this is a
+            // stray background event from the tracked app (e.g. audio playing
+            // while the user is elsewhere). Do not count.
+            activePkg != null -> return
+            // Couldn't read the active root (brief focus loss, common on
+            // ColorOS). Fall back to the latched foreground so we don't count
+            // over another app. A null root can't be counted anyway (detectors
+            // require a non-null tree), so this never loses a legitimate count.
+            else -> {
+                val fg = foregroundPackage
+                if (fg != null && fg != pkg) return
+            }
+        }
+
         val matched = detector.consume(event, root)
 
         // Always publish the latest feed-presence reading, even when this

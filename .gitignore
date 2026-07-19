@@ -16,6 +16,14 @@ android/.kotlin/
 hs_err_pid*.log
 replay_pid*.log
 
+# Release artifacts & local scratch files (deploy the APK to Vercel manually,
+# never commit it — it bloats the repo permanently)
+*.apk
+*.aab
+build_log.txt
+current_screen.png
+flutter_pid.txt
+
 # Generated
 *.g.dart
 *.freezed.dart

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -111,7 +112,44 @@ class AuthRepository {
       return await fetchProfile(user.id);
     } on AuthException catch (e) {
       throw AuthFailure(e.message);
+    } on PlatformException catch (e) {
+      throw AuthFailure(_mapGoogleSignInError(e));
     }
+  }
+
+  /// Maps native Google Sign-In [PlatformException]s to user-facing messages.
+  ///
+  /// The Android `GoogleSignIn` plugin surfaces failures as a
+  /// `PlatformException(sign_in_failed, <statusCode>: ...)`. The most common in
+  /// production is status code 10 (`DEVELOPER_ERROR`), which means the app's
+  /// package name + signing SHA-1 has no matching Android OAuth client in the
+  /// Google Cloud project (e.g. the Play App Signing certificate was never
+  /// registered), or the configured server/web client ID is wrong.
+  String _mapGoogleSignInError(PlatformException e) {
+    final detail = (e.message ?? '').toLowerCase();
+    final code = e.code;
+
+    if (code == GoogleSignIn.kSignInFailedError) {
+      // Status code is embedded in the message, e.g. "o2.d: 10: ".
+      if (detail.contains('10:') || detail.contains('developer_error')) {
+        return 'Google sign-in isn\'t configured for this build. '
+            'Please try email sign-in, or update the app to the latest version.';
+      }
+      if (detail.contains('12501') || detail.contains('canceled')) {
+        return 'Sign-in cancelled.';
+      }
+      if (detail.contains('7:') || detail.contains('network')) {
+        return 'Network error during Google sign-in. Check your connection and try again.';
+      }
+      return 'Google sign-in failed. Please try again or use email sign-in.';
+    }
+    if (code == GoogleSignIn.kNetworkError) {
+      return 'Network error during Google sign-in. Check your connection and try again.';
+    }
+    if (code == GoogleSignIn.kSignInCanceledError) {
+      return 'Sign-in cancelled.';
+    }
+    return 'Google sign-in failed. Please try again or use email sign-in.';
   }
 
   // ---------------------------------------------------------------------------
