@@ -5,56 +5,90 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>You're invited to ScrollIQ</title>
   <meta name="description" content="A friend invited you to ScrollIQ. Install the app and your friend request will be waiting." />
-  <meta name="theme-color" content="#0b0b14" />
+  <meta name="theme-color" content="#0B0C10" />
   <meta name="robots" content="noindex" />
 
-  <!-- Open Graph (so the share preview looks right in WhatsApp / Messages / etc.) -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Join me on ScrollIQ" />
   <meta property="og:description" content="ScrollIQ turns your screen-time into a Brain Score. Beat me on the leaderboard." />
   <meta property="og:image" content="https://scroll-iq.vercel.app/og.png" />
 
-  <!--
-    iOS Smart Banner — once you have an App Store ID, replace the placeholder
-    so Safari shows a native install banner.
-  -->
   <!-- <meta name="apple-itunes-app" content="app-id=XXXXXXXXX, app-argument=https://scrolliq.app/invite"> -->
 
   <style>
     *,*::before,*::after{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:#0b0b14;color:#fff;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    :root{
+      --ink:#0B0C10; --ink-2:#15171D; --ink-3:#1B1E25; --border:#262A33; --border-2:#3A3F4B;
+      --lime:#C5F75A; --mint:#7DE0BD; --coral:#FF7A59; --cream:#F2EFE6; --muted:#9AA0AC; --faint:#60656F;
+      --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    html,body{margin:0;padding:0;background:var(--ink);color:var(--cream);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
       -webkit-font-smoothing:antialiased;line-height:1.5;min-height:100%}
-    body{display:flex;align-items:center;justify-content:center;padding:24px}
+    body{display:flex;align-items:center;justify-content:center;padding:24px;
+      background-image:radial-gradient(520px 340px at 50% -10%, rgba(197,247,90,.12), transparent 70%)}
     .card{width:100%;max-width:440px;text-align:center;
-      background:linear-gradient(180deg,#13132a 0%,#0e0e1c 100%);
-      border:1px solid #23234a;border-radius:24px;padding:32px 24px;
-      box-shadow:0 30px 80px rgba(124,92,255,.18),0 8px 24px rgba(0,0,0,.4)}
-    .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:12px;font-weight:700}
-    .logo-dot{width:22px;height:22px;border-radius:7px;
-      background:linear-gradient(135deg,#7c5cff,#22d3ee)}
+      background:linear-gradient(180deg,var(--ink-2) 0%,var(--ink) 100%);
+      border:1px solid var(--border);border-radius:24px;padding:34px 26px;
+      box-shadow:0 30px 80px rgba(0,0,0,.5),0 12px 40px rgba(197,247,90,.10)}
+    .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:14px;font-weight:800;letter-spacing:-.02em;font-size:17px}
+    .logo b{color:var(--lime)}
+    .cortex{display:block;width:30px;height:30px}
     h1{font-size:26px;margin:8px 0 8px;letter-spacing:-.01em}
-    p{color:#a8a8c4;margin:0 0 20px}
-    .ref{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-      background:#1a1a36;border:1px solid #2a2a4d;color:#cdbfff;
-      padding:6px 12px;border-radius:8px;font-size:13px;letter-spacing:.06em}
-    .stores{display:flex;flex-direction:column;gap:10px;margin-top:20px}
-    .btn{display:flex;align-items:center;justify-content:center;gap:10px;
-      padding:14px 20px;border-radius:14px;text-decoration:none;font-weight:600;
-      transition:transform .12s ease}
+    p{color:var(--muted);margin:0 0 20px}
+    .ref{display:inline-block;font-family:var(--mono);background:var(--ink-3);border:1px solid var(--border);
+      color:var(--lime);padding:7px 13px;border-radius:9px;font-size:13px;letter-spacing:.08em}
+    .stores{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+    .btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:15px 20px;border-radius:14px;
+      text-decoration:none;font-weight:700;transition:transform .12s ease,background .2s,border-color .2s}
     .btn:hover{transform:translateY(-1px)}
-    .btn-primary{background:linear-gradient(135deg,#7c5cff,#5a3dff);color:#fff}
-    .btn-ghost{background:transparent;border:1px solid #2a2a4d;color:#fff}
-    .open{display:block;margin-top:14px;color:#a8a8c4;font-size:13px;text-decoration:underline}
-    .spin{display:inline-block;width:14px;height:14px;border:2px solid #ffffff55;
-      border-top-color:#fff;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}
+    .btn-primary{background:var(--lime);color:var(--ink);box-shadow:0 10px 30px rgba(197,247,90,.22)}
+    .btn-primary:hover{background:#d3ff77}
+    .btn-ghost{background:transparent;border:1px solid var(--border-2);color:var(--cream)}
+    .btn-ghost:hover{border-color:var(--muted)}
+    .open{display:block;margin-top:14px;color:var(--muted);font-size:13px;text-decoration:underline}
+    .open:hover{color:var(--cream)}
+    .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(242,239,230,.28);
+      border-top-color:var(--lime);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}
     @keyframes s{to{transform:rotate(360deg)}}
     .hidden{display:none}
   </style>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="cortex" viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="cx-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#DBFF88"/>
+          <stop offset="1" stop-color="#7DE0BD"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="51" r="45" fill="#C5F75A" opacity="0.12"/>
+      <rect x="12" y="13" width="76" height="74" rx="30" ry="33" fill="url(#cx-body)" stroke="#3f6a2e" stroke-opacity="0.35" stroke-width="1.4"/>
+      <ellipse cx="40" cy="31" rx="17" ry="8" fill="#ffffff" opacity="0.22"/>
+      <g fill="none" stroke="#4f8130" stroke-opacity="0.42" stroke-width="2.2" stroke-linecap="round">
+        <path d="M27 30 q7 -8 15 -2"/>
+        <path d="M58 28 q8 -7 16 0"/>
+        <path d="M42 40 q8 -6 16 0"/>
+      </g>
+      <g fill="#0A0B0E">
+        <circle cx="38" cy="53" r="6.6"/>
+        <circle cx="62" cy="53" r="6.6"/>
+      </g>
+      <g fill="#ffffff">
+        <circle cx="35.8" cy="50.4" r="2.5"/>
+        <circle cx="59.8" cy="50.4" r="2.5"/>
+      </g>
+      <g fill="#FF7A59" opacity="0.32">
+        <ellipse cx="27" cy="64" rx="5.2" ry="3.1"/>
+        <ellipse cx="73" cy="64" rx="5.2" ry="3.1"/>
+      </g>
+      <path d="M41 68 q9 8 18 0" fill="none" stroke="#0A0B0E" stroke-width="3.2" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
   <main class="card" role="main">
-    <div class="logo"><span class="logo-dot"></span>ScrollIQ</div>
+    <div class="logo"><svg class="cortex"><use href="#cortex"/></svg> Scroll<b>IQ</b></div>
     <h1>You're invited 🎉</h1>
     <p id="msg"><span class="spin"></span>Opening ScrollIQ…</p>
     <div id="ref-wrap" class="hidden">
@@ -67,8 +101,7 @@
          href="https://www.dropbox.com/scl/fi/vwobolzt4j0vdtsxtio75/app-release.apk?rlkey=s7ay9xh8nljwze4vpf6oxwu2j&amp;st=itb3z8qo&amp;dl=1">
         ⬇ Download for Android
       </a>
-      <a class="btn btn-ghost" id="ios"
-         href="#">
+      <a class="btn btn-ghost" id="ios" href="#">
         Get on the App Store
       </a>
     </div>
@@ -111,14 +144,12 @@
     function tryDeepLink () {
       if (triedDeepLink) return;
       triedDeepLink = true;
-      // Use location.replace so users don't bounce back here on "Back".
       try { location.replace(SCHEME); } catch (e) {}
     }
 
-    // Fire the deep-link attempt shortly after paint.
     setTimeout(tryDeepLink, 100);
 
-    // After a couple of seconds with no app handoff, send to the right store.
+    // After a couple of seconds with no app handoff, send to the download.
     var fallback = setTimeout(function () {
       if (isAndroid) {
         location.replace(PLAY_URL);
@@ -136,15 +167,12 @@
       }
     }, 2200);
 
-    // If the user backgrounds the tab (i.e. the app actually opened),
-    // cancel the store redirect.
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) clearTimeout(fallback);
     });
   })();
 </script>
 
-  <!-- Vercel Web Analytics (static-site install). -->
   <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script>
   <script defer src="/_vercel/insights/script.js"></script>
 </body>
