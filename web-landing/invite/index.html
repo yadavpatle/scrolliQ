@@ -64,7 +64,7 @@
 
     <div class="stores">
       <a class="btn btn-primary" id="play"
-         href="/downloads/scrolliq.apk" download>
+         href="https://www.dropbox.com/scl/fi/vwobolzt4j0vdtsxtio75/app-release.apk?rlkey=s7ay9xh8nljwze4vpf6oxwu2j&amp;st=itb3z8qo&amp;dl=1">
         ⬇ Download for Android
       </a>
       <a class="btn btn-ghost" id="ios"
@@ -88,10 +88,10 @@
 
     // TODO: replace XXXXXXXXX with the real App Store ID once iOS ships.
     var IOS_APP_ID = 'XXXXXXXXX';
-    // Direct APK download (not on Google Play yet). The ?ref is dropped here
-    // because APK installs can't carry an install-referrer — the code is
-    // stored client-side by the invite page below and redeemed after sign-in.
-    var PLAY_URL = '/downloads/scrolliq.apk';
+    // Direct APK download (hosted on Dropbox, dl=1 forces the download).
+    // Not on Google Play yet; the ?ref is stored client-side by this page and
+    // redeemed after sign-in, since an APK install can't carry a referrer.
+    var PLAY_URL = 'https://www.dropbox.com/scl/fi/vwobolzt4j0vdtsxtio75/app-release.apk?rlkey=s7ay9xh8nljwze4vpf6oxwu2j&st=itb3z8qo&dl=1';
     var IOS_URL  = 'https://apps.apple.com/app/id' + IOS_APP_ID;
     var SCHEME   = 'scrolliq://invite' + (ref ? '?ref=' + refSafe : '');
 

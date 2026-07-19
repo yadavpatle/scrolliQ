@@ -4,14 +4,6 @@
   "trailingSlash": false,
   "headers": [
     {
-      "source": "/downloads/scrolliq.apk",
-      "headers": [
-        { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
-        { "key": "Content-Disposition", "value": "attachment; filename=\"scrolliq-1.0.0.apk\"" },
-        { "key": "Cache-Control", "value": "public, max-age=300" }
-      ]
-    },
-    {
       "source": "/.well-known/assetlinks.json",
       "headers": [
         { "key": "Content-Type", "value": "application/json" },
